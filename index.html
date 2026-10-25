@@ -1,0 +1,1603 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Xeque Treino</title>
+<meta name="description" content="Treino de xadrez contra o Stockfish: aberturas, níveis, relógio, professor e sons.">
+<meta name="theme-color" content="#e6efec" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0a1211" media="(prefers-color-scheme: dark)">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Xeque Treino">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<style>
+@font-face{font-family:"Bricolage Grotesque";src:url(bricolage.ttf) format("truetype");font-weight:200 800;font-stretch:75% 100%;font-display:swap}
+@font-face{font-family:"DM Sans";src:url(dmsans.ttf) format("truetype");font-weight:100 1000;font-display:swap}
+@font-face{font-family:"JetBrains Mono";src:url(jetbrainsmono.ttf) format("truetype");font-weight:100 800;font-display:swap}
+:root{color-scheme:light;padding-block:env(safe-area-inset-top,0px) env(safe-area-inset-bottom,0px)}
+body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}
+.topbtns{display:flex;align-items:center;gap:8px}
+</style>
+<style>
+  /* Layout: tabuleiro em destaque, painel de controle ao lado (desktop) ou abaixo (celular), navegação flutuante embaixo. Tudo redondo e com botões "de apertar". */
+  :root {
+    --bg: #e6efec; --bg2: #d6e6e0; --panel: #ffffff; --ink: #10201d; --muted: #4f625d; --line: #c9d8d3;
+    --accent: #3358e8; --accent-deep: #2340b8; --accent-ink: #ffffff; --accent-soft: #dfe6ff;
+    --gold: #f5b81c; --gold-deep: #c38a00; --gold-ink: #2a1d00; --gold-soft: #fff0c4;
+    --sq-light: #eef1e6; --sq-dark: #6c9a82; --frame: #2d4a40;
+    --hl: rgba(245, 184, 28, 0.55); --dot: rgba(16, 32, 29, 0.32); --check: rgba(224, 64, 52, 0.8);
+    --good: #17713f; --good-bg: #d6f3e3; --warn: #8a5200; --warn-bg: #fdecc4; --bad: #b0261c; --bad-bg: #fde0dc;
+    --neutral-bg: #dfe9e5;
+    --pw: #fffefa; --pw-line: #14201d; --pb: #1a2220; --pb-line: rgba(255, 255, 255, 0.55);
+    --shadow: 0 10px 28px rgba(16, 40, 34, 0.16);
+    --f-display: "Bricolage Grotesque", system-ui, sans-serif;
+    --f-body: "DM Sans", system-ui, sans-serif;
+    --f-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0a1211; --bg2: #0f1c19; --panel: #15221f; --ink: #e7f1ee; --muted: #9bb0aa; --line: #2a3d3a;
+      --accent: #7d98ff; --accent-deep: #4a63d6; --accent-ink: #0a1030; --accent-soft: #1d2a55;
+      --gold: #f5c542; --gold-deep: #b8890a; --gold-ink: #241900; --gold-soft: #3a2f0c;
+      --sq-light: #bccabf; --sq-dark: #4a6e5f; --frame: #050c0b;
+      --hl: rgba(245, 197, 66, 0.5); --dot: rgba(10, 20, 18, 0.4);
+      --good: #6fdca6; --good-bg: #153a2c; --warn: #f0c068; --warn-bg: #3a2c0e; --bad: #ff9a92; --bad-bg: #40191a;
+      --neutral-bg: #1f302d; --shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0a1211; --bg2: #0f1c19; --panel: #15221f; --ink: #e7f1ee; --muted: #9bb0aa; --line: #2a3d3a;
+    --accent: #7d98ff; --accent-deep: #4a63d6; --accent-ink: #0a1030; --accent-soft: #1d2a55;
+    --gold: #f5c542; --gold-deep: #b8890a; --gold-ink: #241900; --gold-soft: #3a2f0c;
+    --sq-light: #bccabf; --sq-dark: #4a6e5f; --frame: #050c0b;
+    --hl: rgba(245, 197, 66, 0.5); --dot: rgba(10, 20, 18, 0.4);
+    --good: #6fdca6; --good-bg: #153a2c; --warn: #f0c068; --warn-bg: #3a2c0e; --bad: #ff9a92; --bad-bg: #40191a;
+    --neutral-bg: #1f302d; --shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    background-image: linear-gradient(180deg, var(--bg2), var(--bg) 380px);
+    color: var(--ink);
+    font-family: var(--f-body);
+    font-size: 15px;
+    line-height: 1.45;
+    padding-block: 14px 112px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  button, select, input { font: inherit; color: inherit; }
+  button { -webkit-tap-highlight-color: transparent; }
+  button:focus-visible, select:focus-visible, input:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+  h1, h2, h3 { font-family: var(--f-display); text-wrap: balance; margin: 0; }
+  p { margin: 0; }
+
+  .app { max-width: 1040px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+  .top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+  .logo { flex: none; width: 48px; height: 48px; border-radius: 16px; background: var(--accent); color: var(--accent-ink); display: grid; place-items: center; font-size: 30px; line-height: 1; box-shadow: 0 4px 0 var(--accent-deep); font-family: "Noto Sans Symbols 2", "Segoe UI Symbol", "Apple Symbols", "DejaVu Sans", sans-serif; }
+  h1 { font-weight: 800; font-size: 1.7rem; letter-spacing: -0.02em; line-height: 1; }
+  .sub { margin-top: 5px; color: var(--muted); font-size: 0.88rem; }
+
+  .grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  .grid.solo { max-width: 760px; width: 100%; margin: 0 auto; }
+  @media (min-width: 900px) {
+    .grid:not(.solo) { grid-template-columns: minmax(0, 560px) minmax(0, 1fr); align-items: start; gap: 24px; }
+  }
+  .boardcol { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+
+  /* ---------- botões ---------- */
+  .btn { border: 2px solid var(--line); background: var(--panel); border-radius: 999px; padding: 10px 18px; min-height: 48px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 3px 0 var(--line); text-align: center; }
+  .btn:hover { border-color: var(--muted); }
+  .btn:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--line); }
+  .btn:disabled { opacity: 0.45; cursor: default; transform: none; }
+  .btn.primary { background: var(--accent); border-color: var(--accent-deep); color: var(--accent-ink); box-shadow: 0 4px 0 var(--accent-deep); }
+  .btn.primary:active { box-shadow: 0 1px 0 var(--accent-deep); }
+  .btn.gold { background: var(--gold); border-color: var(--gold-deep); color: var(--gold-ink); box-shadow: 0 4px 0 var(--gold-deep); }
+  .btn.gold:active { box-shadow: 0 1px 0 var(--gold-deep); }
+  .btn.round { width: 48px; padding: 0; flex: none; font-size: 1.2rem; }
+  .btn.small { min-height: 38px; padding: 6px 14px; font-size: 0.88rem; box-shadow: 0 2px 0 var(--line); }
+  .btn.grow { flex: 1; }
+  .btn svg { width: 20px; height: 20px; }
+  .actions { display: flex; flex-wrap: wrap; gap: 10px; }
+  #act-learn .btn.grow { padding-inline: 10px; white-space: nowrap; }
+
+  .pills { display: flex; flex-wrap: wrap; gap: 8px; }
+  .pill { border: 2px solid var(--line); background: var(--panel); border-radius: 999px; min-height: 44px; min-width: 44px; padding: 8px 16px; font-weight: 700; cursor: pointer; flex: 1 1 auto; box-shadow: 0 3px 0 var(--line); }
+  .pill:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--line); }
+  .pill[aria-checked="true"], .pill[aria-pressed="true"] { background: var(--accent); border-color: var(--accent-deep); color: var(--accent-ink); box-shadow: 0 3px 0 var(--accent-deep); }
+  .pill.wide { flex: 1 1 100%; text-align: left; border-radius: 20px; font-weight: 600; font-size: 0.88rem; }
+  .select { width: 100%; min-height: 48px; padding: 8px 44px 8px 18px; border: 2px solid var(--line); border-radius: 999px; background-color: var(--panel); appearance: none; -webkit-appearance: none; font-weight: 600; cursor: pointer;
+    background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+    background-position: calc(100% - 24px) 52%, calc(100% - 18px) 52%; background-size: 6px 6px, 6px 6px; background-repeat: no-repeat; }
+  .input { flex: 1; min-width: 0; min-height: 48px; padding: 8px 18px; border: 2px solid var(--line); border-radius: 999px; background: var(--panel); }
+
+  /* ---------- status e relógios ---------- */
+  .status { display: flex; align-items: flex-start; gap: 10px; min-height: 58px; padding: 10px 14px; background: var(--panel); border: 1px solid var(--line); border-radius: 22px; box-shadow: 0 3px 0 var(--line); }
+  .status p { font-size: 0.93rem; padding-top: 3px; min-width: 0; overflow-wrap: anywhere; }
+  .badge { flex: none; font-size: 0.72rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; padding: 6px 11px; border-radius: 999px; background: var(--neutral-bg); color: var(--muted); white-space: nowrap; }
+  .badge.good { background: var(--good-bg); color: var(--good); }
+  .badge.warn { background: var(--warn-bg); color: var(--warn); }
+  .badge.bad { background: var(--bad-bg); color: var(--bad); }
+  .badge.gold { background: var(--gold-soft); color: var(--warn); }
+  .clockbar { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 8px 16px; border: 2px solid var(--line); border-radius: 999px; background: var(--panel); }
+  .clockbar .who { font-size: 0.85rem; font-weight: 700; color: var(--muted); min-width: 0; }
+  .clockbar .t { font: 700 1.4rem/1 var(--f-mono); font-variant-numeric: tabular-nums; }
+  .clockbar.act { border-color: var(--accent); }
+  .clockbar.act .t { color: var(--accent); }
+  .clockbar.low .t { color: var(--bad); }
+
+  /* ---------- tabuleiro ---------- */
+  .boardwrap { background: var(--frame); padding: clamp(5px, 1.8vw, 9px); border-radius: 24px; box-shadow: var(--shadow); }
+  .board { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); grid-template-rows: repeat(8, minmax(0, 1fr)); width: 100%; aspect-ratio: 1; border-radius: 16px; overflow: hidden; container-type: inline-size; user-select: none; -webkit-user-select: none; }
+  .sq { position: relative; display: flex; align-items: center; justify-content: center; margin: 0; padding: 0; border: 0; border-radius: 0; background: var(--sq-light); cursor: pointer; min-width: 0; min-height: 0; }
+  .sq.d { background: var(--sq-dark); }
+  .sq.last::before { content: ""; position: absolute; inset: 0; background: var(--hl); }
+  .sq.chk::before { content: ""; position: absolute; inset: 0; background: radial-gradient(circle, var(--check) 0%, transparent 72%); }
+  .sq.sel::before { content: ""; position: absolute; inset: 0; background: var(--hl); box-shadow: inset 0 0 0 0.6cqw var(--accent); }
+  .sq.gd::before { content: ""; position: absolute; inset: 0; background: var(--hl); box-shadow: inset 0 0 0 0.8cqw var(--gold-deep); }
+  .sq.bad::before { content: ""; position: absolute; inset: 0; background: var(--check); opacity: 0.6; }
+  .sq.dot::after { content: ""; position: absolute; width: 28%; height: 28%; border-radius: 50%; background: var(--dot); z-index: 2; }
+  .sq.cap::after { content: ""; position: absolute; inset: 4%; border-radius: 50%; border: 1.1cqw solid var(--dot); z-index: 2; }
+  .pc { position: relative; z-index: 1; font-size: 10.6cqw; line-height: 1; font-family: "Noto Sans Symbols 2", "Segoe UI Symbol", "Apple Symbols", "DejaVu Sans", sans-serif; font-variant-emoji: text; paint-order: stroke fill; filter: drop-shadow(0 0.9cqw 0.6cqw rgba(0, 0, 0, 0.28)); }
+  .pc.w { color: var(--pw); -webkit-text-stroke: 0.42cqw var(--pw-line); }
+  .pc.b { color: var(--pb); -webkit-text-stroke: 0.18cqw var(--pb-line); }
+  .sq.sel .pc { transform: translateY(-6%) scale(1.1); }
+  .sq.bad .pc { animation: shake 0.4s; }
+  .co { position: absolute; z-index: 2; font: 700 2.7cqw/1 var(--f-mono); color: var(--sq-dark); pointer-events: none; }
+  .sq.d .co { color: var(--sq-light); }
+  .co.rk { top: 0.9cqw; left: 1cqw; }
+  .co.fl { bottom: 0.8cqw; right: 1cqw; }
+  .promo { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 14px; border: 2px solid var(--line); border-radius: 24px; background: var(--panel); }
+  .promo .t { font-weight: 700; margin-right: 4px; }
+
+  /* ---------- painéis ---------- */
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 28px; padding: 18px; display: flex; flex-direction: column; gap: 16px; min-width: 0; box-shadow: var(--shadow); }
+  .panel h2 { font-weight: 700; font-size: 1.2rem; letter-spacing: -0.01em; }
+  .field { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+  .lbl { font-size: 0.74rem; font-weight: 800; letter-spacing: 0.07em; text-transform: uppercase; color: var(--muted); }
+  .hint { font-size: 0.85rem; color: var(--muted); }
+  .levelname { font-size: 0.9rem; }
+  .thead { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .thead .tt { display: flex; flex-direction: column; gap: 4px; min-width: 0; flex: 1; }
+  .tag { display: inline-block; width: fit-content; font-size: 0.74rem; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; padding: 4px 10px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); }
+  .steps { display: flex; gap: 8px; }
+  .step { flex: 1; border: 2px solid var(--line); background: var(--panel); border-radius: 999px; min-height: 46px; padding: 6px 8px; font-weight: 700; font-size: 0.86rem; cursor: pointer; box-shadow: 0 3px 0 var(--line); }
+  .step[aria-selected="true"] { background: var(--gold); border-color: var(--gold-deep); color: var(--gold-ink); box-shadow: 0 3px 0 var(--gold-deep); }
+  .ideas { margin: 0; padding-left: 1.2em; display: flex; flex-direction: column; gap: 4px; }
+  .notebox { background: var(--gold-soft); border-radius: 22px; padding: 12px 16px; min-height: 76px; }
+  .notebox b { font-family: var(--f-mono); }
+  .line { display: flex; flex-wrap: wrap; gap: 5px 4px; font-family: var(--f-mono); font-size: 0.86rem; align-items: center; }
+  .line .n { color: var(--muted); margin: 0 1px 0 6px; }
+  .chip { border: 0; background: var(--neutral-bg); border-radius: 999px; padding: 6px 12px; cursor: pointer; font-family: inherit; font-size: inherit; min-height: 34px; }
+  .chip.on { background: var(--accent); color: var(--accent-ink); }
+  .moves { display: grid; grid-template-columns: 2.4em 1fr 1fr; gap: 2px 8px; max-height: 180px; overflow-y: auto; font-family: var(--f-mono); font-size: 0.85rem; padding: 10px 14px; border-radius: 22px; background: var(--bg); }
+  .moves .mn { color: var(--muted); }
+  .moves .mv.now { font-weight: 700; color: var(--accent); }
+  .moves .empty { grid-column: 1 / -1; color: var(--muted); font-family: var(--f-body); }
+  .track { height: 14px; border-radius: 999px; background: var(--neutral-bg); overflow: hidden; }
+  .track i { display: block; height: 100%; border-radius: 999px; background: var(--accent); transition: width 0.3s; }
+  .row { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+  .pips { display: flex; gap: 6px; }
+  .pip { width: 14px; height: 14px; border-radius: 50%; background: var(--neutral-bg); box-shadow: inset 0 0 0 2px var(--line); }
+  .pip.on { background: var(--gold); box-shadow: inset 0 0 0 2px var(--gold-deep); }
+  .result { border-radius: 24px; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; background: var(--good-bg); color: var(--ink); }
+  .result.mid { background: var(--warn-bg); }
+  .result h3 { font-size: 1.05rem; }
+
+  .olist { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; }
+  .ocard { display: flex; flex-direction: column; gap: 8px; text-align: left; width: 100%; border: 2px solid var(--line); background: var(--panel); border-radius: 24px; padding: 14px 16px; cursor: pointer; box-shadow: 0 3px 0 var(--line); }
+  .ocard:hover { border-color: var(--accent); }
+  .ocard:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--line); }
+  .oc-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+  .oc-top b { font-family: var(--f-display); font-size: 1.02rem; }
+  .oc-sum { font-size: 0.85rem; color: var(--muted); }
+  .oc-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 2px; }
+  .mlabel { font-size: 0.78rem; font-weight: 700; color: var(--muted); }
+  .resume { background: var(--gold-soft); border-color: var(--gold-deep); }
+
+  /* ---------- professor ---------- */
+  .chat { display: flex; flex-direction: column; gap: 10px; max-height: 50vh; min-height: 180px; overflow-y: auto; padding: 4px 2px; }
+  .bubble { max-width: 90%; padding: 10px 15px; border-radius: 22px; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .bubble.bot { align-self: flex-start; background: var(--neutral-bg); border-bottom-left-radius: 8px; }
+  .bubble.user { align-self: flex-end; background: var(--accent); color: var(--accent-ink); border-bottom-right-radius: 8px; }
+  .bubble.pending { opacity: 0.7; }
+  .chips { display: flex; flex-wrap: nowrap; gap: 8px; overflow-x: auto; padding: 2px 2px 8px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+  .chips::-webkit-scrollbar { display: none; }
+  .chips .qchip { flex: none; white-space: nowrap; }
+  .qchip { border: 2px solid var(--line); background: var(--panel); border-radius: 999px; padding: 7px 14px; min-height: 40px; font-weight: 600; font-size: 0.85rem; cursor: pointer; box-shadow: 0 2px 0 var(--line); }
+  .qchip.gold { background: var(--gold-soft); border-color: var(--gold-deep); }
+  .qchip:active { transform: translateY(1px); box-shadow: none; }
+  .askrow { display: flex; gap: 10px; }
+
+  /* ---------- navegação ---------- */
+  .bottomnav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; display: flex; justify-content: center; pointer-events: none; padding-top: 8px; padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+  .bn-in { pointer-events: auto; display: flex; gap: 6px; padding: 6px; border-radius: 999px; background: var(--panel); border: 1px solid var(--line); box-shadow: var(--shadow); width: 100%; max-width: 440px; }
+  .bn { flex: 1; border: 0; background: transparent; border-radius: 999px; min-height: 54px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-size: 0.74rem; font-weight: 700; color: var(--muted); cursor: pointer; }
+  .bn svg { width: 24px; height: 24px; }
+  .bn[aria-current="page"] { background: var(--accent); color: var(--accent-ink); box-shadow: 0 3px 0 var(--accent-deep); }
+
+  .confetti { position: fixed; inset: 0; pointer-events: none; z-index: 40; overflow: hidden; }
+  .confetti i { position: absolute; top: -20px; width: 10px; height: 16px; border-radius: 3px; animation: fall 2s ease-in forwards; }
+
+  @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-8%); } 75% { transform: translateX(8%); } }
+  @keyframes fall { to { transform: translateY(110vh) rotate(540deg); opacity: 0.9; } }
+  @keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: no-preference) {
+    .btn, .pill, .step, .chip, .ocard, .qchip, .bn { transition: background 0.12s, border-color 0.12s, transform 0.08s, box-shadow 0.08s; }
+    .pc { transition: transform 0.12s; }
+    .panel > *, .bubble, .result { animation: rise 0.25s ease-out; }
+  }
+  @media (prefers-reduced-motion: reduce) { .confetti { display: none; } }
+</style>
+<script src="chess.js"></script>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="brand">
+      <span class="logo" aria-hidden="true">&#9822;&#xFE0E;</span>
+      <div>
+        <h1>Xeque Treino</h1>
+        <p class="sub" id="sub"></p>
+      </div>
+    </div>
+    <div class="topbtns"><button class="btn small" id="install-btn" hidden>Instalar app</button><button class="btn round" id="snd-btn" data-act="snd" aria-pressed="true" aria-label="Som"></button></div>
+  </header>
+
+  <main class="grid" id="grid">
+    <section class="boardcol" id="boardcol">
+      <div class="status" id="status" aria-live="polite"></div>
+      <div class="clockbar" id="clk-top" hidden></div>
+      <div class="boardwrap"><div class="board" id="board" role="group" aria-label="Tabuleiro de xadrez"></div></div>
+      <div class="clockbar" id="clk-bot" hidden></div>
+      <div class="promo" id="promo" hidden></div>
+      <div class="actions" id="act-play">
+        <button class="btn grow" data-act="undo">Desfazer</button>
+        <button class="btn grow gold" data-act="hint">Dica da teoria</button>
+        <button class="btn grow" data-act="flip">Virar</button>
+      </div>
+      <div class="actions" id="act-learn" hidden>
+        <button class="btn round" data-act="l-first" aria-label="Início">&#9198;</button>
+        <button class="btn grow" data-act="l-prev" aria-label="Lance anterior">&#9664; Voltar</button>
+        <button class="btn grow primary" data-act="l-next" aria-label="Próximo lance">Avançar &#9654;</button>
+        <button class="btn round" data-act="l-last" aria-label="Fim da linha">&#9197;</button>
+      </div>
+      <div class="actions" id="act-drill" hidden>
+        <button class="btn grow" data-act="d-restart">Recomeçar</button>
+        <button class="btn grow gold" data-act="d-show">Mostrar o lance</button>
+        <button class="btn grow" data-act="flip">Virar</button>
+      </div>
+    </section>
+
+    <section class="panel" id="view-play">
+      <h2>Nova partida</h2>
+      <div class="field">
+        <span class="lbl" id="lbl-color">Você joga de</span>
+        <div class="pills" role="radiogroup" aria-labelledby="lbl-color" id="seg-color">
+          <button class="pill" role="radio" data-act="color" data-v="w">Brancas</button>
+          <button class="pill" role="radio" data-act="color" data-v="b">Pretas</button>
+        </div>
+      </div>
+      <div class="field">
+        <label class="lbl" for="sel-opening">Abertura do oponente</label>
+        <select class="select" id="sel-opening"></select>
+      </div>
+      <div class="field">
+        <span class="lbl" id="lbl-level">Nível do oponente</span>
+        <div class="pills" role="radiogroup" aria-labelledby="lbl-level" id="seg-level"></div>
+        <p class="levelname" id="levelname"></p>
+        <p class="hint" id="engine-note"></p>
+      </div>
+      <div class="field">
+        <label class="lbl" for="sel-time">Tempo de partida</label>
+        <select class="select" id="sel-time">
+          <option value="none" selected>Sem relógio</option>
+          <option value="1+0">Bala · 1 min</option>
+          <option value="3+0">Blitz · 3 min</option>
+          <option value="3+2">Blitz · 3 min + 2 s por lance</option>
+          <option value="5+0">Blitz · 5 min</option>
+          <option value="5+3">Blitz · 5 min + 3 s por lance</option>
+          <option value="10+0">Rápida · 10 min</option>
+          <option value="10+5">Rápida · 10 min + 5 s por lance</option>
+          <option value="15+10">Rápida · 15 min + 10 s por lance</option>
+          <option value="30+0">Rápida · 30 min</option>
+        </select>
+        <p class="hint">O relógio começa depois que cada lado fizer o primeiro lance. Quem ficar sem tempo perde.</p>
+      </div>
+      <button class="btn primary" data-act="newgame">Começar nova partida</button>
+      <p class="hint">O nível vale já no próximo lance do oponente. Cor, abertura e tempo valem na próxima partida.</p>
+      <div class="field">
+        <span class="lbl">Lances</span>
+        <div class="moves" id="moves"></div>
+      </div>
+    </section>
+
+    <section class="panel" id="view-train" hidden></section>
+
+    <section class="panel" id="view-teach" hidden>
+      <div class="thead">
+        <div class="tt"><h2>Professor</h2><span class="hint" id="ai-note"></span></div>
+        <button class="btn small" id="ai-toggle" data-act="aitoggle" hidden></button>
+      </div>
+      <div class="chat" id="chat" aria-live="polite"></div>
+      <div class="chips" id="chips"></div>
+      <form class="askrow" id="askform">
+        <input class="input" id="askin" type="text" placeholder="Pergunte qualquer coisa sobre xadrez" autocomplete="off" enterkeyhint="send" aria-label="Sua pergunta">
+        <button class="btn round primary" type="submit" id="asksend" aria-label="Enviar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+        <button class="btn round" type="button" id="askstop" data-act="askstop" aria-label="Parar" hidden>&#9632;</button>
+      </form>
+    </section>
+  </main>
+</div>
+
+<nav class="bottomnav" aria-label="Seções do app">
+  <div class="bn-in">
+    <button class="bn" data-act="tab" data-v="play"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="6"/><path d="M10 8.5l5.5 3.5-5.5 3.5z" fill="currentColor"/></svg>Jogar</button>
+    <button class="bn" data-act="tab" data-v="train"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1" fill="currentColor"/></svg><span id="train-label">Treinar</span></button>
+    <button class="bn" data-act="tab" data-v="teach"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 9l10-5 10 5-10 5z"/><path d="M6 11v5c0 1.6 2.7 3 6 3s6-1.4 6-3v-5"/></svg>Professor</button>
+  </div>
+</nav>
+
+<script>
+/* ============ Dados: aberturas ============ */
+const norm = s => s.replace(/[+#]/g, '');
+const OPENINGS = [
+  { id: 'italiana', side: 'w', name: 'Italiana (Giuoco Piano)',
+    summary: 'Desenvolvimento rápido e bispo em c4 apontado para f7.',
+    ideas: ['Desenvolva cavalos e bispos antes de atacar.', 'Prepare c3 e d4 para ocupar o centro.', 'Faça o roque curto cedo e mantenha o bispo de c4 pressionando f7.'],
+    lines: ['e4 e5 Nf3 Nc6 Bc4 Bc5 c3 Nf6 d3 d6 O-O O-O Re1 a6 Bb3 Ba7',
+            'e4 e5 Nf3 Nc6 Bc4 Nf6 Ng5 d5 exd5 Na5 Bb5+ c6 dxc6 bxc6 Be2 h6 Nf3 e4'],
+    notes: { 0: 'Peão ao centro: abre caminho para a dama e o bispo.', 2: 'O cavalo ataca e5 e se desenvolve ao mesmo tempo.', 4: 'O bispo mira f7, o ponto mais fraco das pretas.', 6: 'Prepara d4 para tomar o centro com peões.', 8: 'Jogada calma: protege e4 e libera o bispo de c1.', 10: 'Roque curto: rei seguro e torre ativa.', 12: 'A torre apoia e4 e o avanço d4.', 14: 'Retira o bispo antes que ...b5 o expulse.' } },
+  { id: 'evans', side: 'w', name: 'Gambito Evans',
+    summary: 'Sacrifício do peão b4 para ganhar tempo e montar um centro grande.',
+    ideas: ['Ofereça o peão b4 para desviar o bispo adversário.', 'Jogue c3 e d4 para abrir o centro com ganho de tempo.', 'Use a vantagem de desenvolvimento para atacar antes que as pretas se organizem.'],
+    lines: ['e4 e5 Nf3 Nc6 Bc4 Bc5 b4 Bxb4 c3 Ba5 d4 exd4 O-O d6 cxd4 Bb6'],
+    notes: { 6: 'O gambito: oferece o peão b para ganhar tempo.', 8: 'Ataca o bispo e prepara d4.', 10: 'Centro enorme: as brancas ganham espaço e atacam.', 12: 'Roque: desenvolvimento vale mais que material aqui.', 14: 'Recaptura e fica com um centro forte de peões.' } },
+  { id: 'ruy', side: 'w', name: 'Ruy Lopez',
+    summary: 'Pressão sobre o cavalo de c6, que protege o peão de e5.',
+    ideas: ['O bispo em b5 ataca o defensor do centro das pretas.', 'Mantenha a tensão e prepare c3 e d4.', 'É uma luta de longo prazo: o ataque vem aos poucos.'],
+    lines: ['e4 e5 Nf3 Nc6 Bb5 a6 Ba4 Nf6 O-O Be7 Re1 b5 Bb3 d6 c3 O-O h3 Nb8 d4 Nbd7',
+            'e4 e5 Nf3 Nc6 Bb5 Nf6 O-O Nxe4 d4 Nd6 Bxc6 dxc6 dxe5 Nf5 Qxd8+ Kxd8'],
+    notes: { 4: 'O bispo pressiona o cavalo que defende e5.', 6: 'Mantém a pressão em vez de trocar já.', 8: 'Roque antes de qualquer tática no centro.', 10: 'Protege e4 para poder jogar d4 depois.', 12: 'O bispo vai para a diagonal a2-g8, mirando f7.', 14: 'Prepara d4 e dá casa de recuo ao bispo.', 16: 'Evita a cravada Bg4 antes de jogar d4.' } },
+  { id: 'escocesa', side: 'w', name: 'Escocesa',
+    summary: 'Abre o centro cedo com d4, trocando peões.',
+    ideas: ['Lance d4 já no terceiro lance para abrir a posição.', 'Os cavalos ficam ativos no centro.', 'Cuidado com o desenvolvimento da dama cedo.'],
+    lines: ['e4 e5 Nf3 Nc6 d4 exd4 Nxd4 Nf6 Nxc6 bxc6 e5 Qe7 Qe2 Nd5 c4 Ba6'],
+    notes: { 4: 'Abre o centro já: troca de peões.', 6: 'O cavalo recaptura e domina o centro.', 8: 'Troca o cavalo mais ativo das pretas e estraga a estrutura delas.', 10: 'Avança com ganho de tempo, atacando o cavalo de f6.', 12: 'A dama protege o peão avançado em e5.', 14: 'Ataca o cavalo e ganha espaço no centro.' } },
+  { id: 'dama', side: 'w', name: 'Gambito da Dama',
+    summary: 'Oferece o peão c4 para disputar o centro com as pretas.',
+    ideas: ['Ataque o peão de d5 com c4.', 'Se as pretas aceitarem, recupere o peão e fique com o centro.', 'Desenvolva com Nc3, Nf3 e Bg5 ou e3.'],
+    lines: ['d4 d5 c4 e6 Nc3 Nf6 Bg5 Be7 e3 O-O Nf3 h6 Bh4 b6',
+            'd4 d5 c4 dxc4 Nf3 Nf6 e3 e6 Bxc4 c5 O-O a6'],
+    notes: { 2: 'O gambito: oferece c4 para desviar o peão de d5 do centro.', 4: 'Desenvolve e aumenta a pressão sobre d5.', 6: 'Crava o cavalo que defende d5.', 8: 'Apoia d4 e libera o bispo de f1.', 10: 'Último cavalo para o jogo.', 12: 'Mantém a cravada em vez de trocar.' } },
+  { id: 'londres', side: 'w', name: 'Sistema Londres',
+    summary: 'Esquema sólido que serve contra quase tudo.',
+    ideas: ['Bispo em f4 antes de fechar com e3.', 'Monte peões em c3, d4 e e3 e desenvolva sem pressa.', 'Bom para quem quer pouca teoria para decorar.'],
+    lines: ['d4 d5 Bf4 Nf6 e3 c5 c3 Nc6 Nd2 e6 Ngf3 Bd6 Bg3 O-O Bd3 b6'],
+    notes: { 2: 'O bispo sai antes de e3 fechar a diagonal. É a ideia central do sistema.', 4: 'Fecha o esquema: peões em d4 e e3.', 6: 'Sustenta d4 contra o ataque de c5.', 8: 'O cavalo de b1 vai para d2 e deixa f3 livre para o outro cavalo.', 12: 'Evita trocar o bispo e mantém o par.', 14: 'Bispo na diagonal b1-h7, apontando para o rei.' } },
+  { id: 'inglesa', side: 'w', name: 'Abertura Inglesa',
+    summary: 'Controla d5 pelo flanco com c4 e deixa o centro para depois.',
+    ideas: ['Jogue c4 e fianqueto o bispo em g2.', 'Pressione d5 sem se comprometer cedo.', 'Muitas transposições para outras aberturas.'],
+    lines: ['c4 e5 Nc3 Nf6 Nf3 Nc6 g3 d5 cxd5 Nxd5 Bg2 Nb6 O-O Be7 a3 O-O'],
+    notes: { 0: 'Controla d5 pelo flanco sem ocupar o centro com peões.', 6: 'Prepara o fianqueto do bispo.', 8: 'Troca o peão de c4 por um peão central das pretas.', 10: 'Bispo na diagonal longa, pressionando o centro e o flanco da dama.', 12: 'Roque curto, rei protegido.', 14: 'Prepara b4 e ganha espaço no flanco da dama.' } },
+
+  { id: 'najdorf', side: 'b', name: 'Siciliana Najdorf',
+    summary: 'A defesa mais combativa contra 1.e4.',
+    ideas: ['Troque o peão c por um peão central das brancas.', 'a6 impede cavalos e bispos de entrarem em b5.', 'Jogue por contra-ataque no flanco da dama.'],
+    lines: ['e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 a6 Be3 e5 Nb3 Be6 f3 Be7 Qd2 O-O O-O-O Nbd7'],
+    notes: { 1: 'Siciliana: as pretas não copiam o centro e criam desequilíbrio.', 3: 'Apoia e5 e controla o centro.', 5: 'Troca o peão lateral por um peão central das brancas.', 7: 'Ataca e4 e desenvolve.', 9: 'A jogada que dá nome à Najdorf: tira b5 das brancas e prepara ...b5.', 11: 'Ocupa o centro e expulsa o cavalo de d4.', 13: 'Desenvolve o bispo e vigia as casas c4 e d5.', 15: 'Prepara o roque curto.', 17: 'Roque: o rei sai do centro antes do ataque das brancas.', 19: 'Termina o desenvolvimento e liga as peças.' } },
+  { id: 'dragao', side: 'b', name: 'Siciliana Dragão',
+    summary: 'Fianqueto do bispo em g7, apontado para a diagonal longa.',
+    ideas: ['Bispo em g7 domina a diagonal a1-h8.', 'As brancas costumam roquear longo e atacar o rei.', 'As pretas respondem com ataque pela coluna c.'],
+    lines: ['e4 c5 Nf3 d6 d4 cxd4 Nxd4 Nf6 Nc3 g6 Be3 Bg7 f3 O-O Qd2 Nc6 Bc4 Bd7'],
+    notes: { 9: 'O fianqueto: prepara o bispo na diagonal longa.', 11: 'O Dragão aparece: o bispo mira a1 e o centro das brancas.', 13: 'Roque curto: o rei fica atrás dos peões f, g e h.', 15: 'Pressiona o cavalo de d4.', 17: 'Prepara ...Rc8 e o contra-ataque pela coluna c.' } },
+  { id: 'francesa', side: 'b', name: 'Defesa Francesa',
+    summary: 'Estrutura sólida: e6 e d5, depois contra-ataque em c5.',
+    ideas: ['Construa a cadeia de peões e6-d5.', 'Ataque a base da cadeia branca com c5.', 'Atenção ao bispo de c8, que fica preso atrás dos peões.'],
+    lines: ['e4 e6 d4 d5 Nc3 Nf6 Bg5 Be7 e5 Nfd7 Bxe7 Qxe7 f4 O-O Nf3 c5'],
+    notes: { 1: 'A Francesa começa com e6 para apoiar d5.', 3: 'Ataca o peão de e4 e disputa o centro.', 5: 'Aumenta a pressão sobre e4.', 7: 'Sai da cravada e prepara a troca.', 9: 'Retira o cavalo para atacar o peão de e5.', 11: 'Recaptura e mantém a dama ativa.', 13: 'Roque curto antes de abrir o jogo.', 15: 'O golpe típico: ataca a base da cadeia de peões, d4.' } },
+  { id: 'caro', side: 'b', name: 'Caro-Kann',
+    summary: 'Sólida como a Francesa, mas o bispo de c8 sai antes de e6.',
+    ideas: ['Jogue c6 e d5 para contestar o centro.', 'Tire o bispo de c8 para f5 antes de fechar com e6.', 'Posição segura, com poucos riscos táticos.'],
+    lines: ['e4 c6 d4 d5 Nc3 dxe4 Nxe4 Bf5 Ng3 Bg6 h4 h6 Nf3 Nd7 h5 Bh7 Bd3 Bxd3 Qxd3 e6'],
+    notes: { 1: 'c6 prepara d5 sem trancar o bispo de c8.', 5: 'Troca o peão central para abrir caminho ao bispo.', 7: 'O bispo sai antes de e6. É a marca da Caro-Kann.', 9: 'Recua o bispo para g6, mantendo-o vivo.', 11: 'Dá uma casa de fuga para o bispo depois de h5.', 15: 'O bispo fica em h7, seguro e ativo.', 17: 'Troca o bispo bom das brancas.', 19: 'Agora e6 fecha o centro com a estrutura pronta.' } },
+  { id: 'escandinava', side: 'b', name: 'Defesa Escandinava',
+    summary: 'Ataca o peão e4 logo no primeiro lance.',
+    ideas: ['Capture em d5 com a dama e retire-a com tempo.', 'Qa5 mantém a dama ativa e fora de perigo.', 'Desenvolva rápido com Nf6, c6 e Bf5.'],
+    lines: ['e4 d5 exd5 Qxd5 Nc3 Qa5 d4 Nf6 Nf3 c6 Bc4 Bf5 Bd2 e6'],
+    notes: { 1: 'Ataca o peão de e4 logo no primeiro lance.', 3: 'Recaptura com a dama, que fica exposta.', 5: 'A dama recua para a5, fora de perigo e mantendo a pressão.', 7: 'Desenvolve com ataque ao centro.', 9: 'Dá casa de recuo à dama e prepara o bispo.', 11: 'O bispo sai antes de e6.', 13: 'Fecha a estrutura e protege o rei.' } },
+  { id: 'indiarei', side: 'b', name: 'Defesa Índia do Rei',
+    summary: 'Deixa as brancas ocuparem o centro e depois ataca esse centro.',
+    ideas: ['Fianqueto do bispo em g7 e roque curto.', 'Quebre o centro com e5 ou c5 no momento certo.', 'Costuma gerar ataque ao rei com f5 e g5.'],
+    lines: ['d4 Nf6 c4 g6 Nc3 Bg7 e4 d6 Nf3 O-O Be2 e5 O-O Nc6 d5 Ne7 Ne1 Nd7'],
+    notes: { 1: 'Ataca o centro das brancas sem ocupá-lo.', 3: 'Prepara o bispo em g7.', 5: 'O bispo vai para a longa diagonal.', 7: 'Controla e5 e abre o bispo de c8.', 9: 'Roque curto e o rei fica seguro.', 11: 'Desafia o centro das brancas.', 13: 'Pressão sobre d4 e desenvolve.', 15: 'Cavalo para e7, caminho do ataque ao rei com ...f5.', 17: 'Prepara ...f5, a jogada típica do ataque no flanco do rei.' } },
+  { id: 'eslava', side: 'b', name: 'Defesa Eslava',
+    summary: 'Protege d5 com c6 sem trancar o bispo de c8.',
+    ideas: ['Jogue c6 e d5 contra o Gambito da Dama.', 'Capture em c4 e tente segurar o peão extra.', 'Bispo para f5 ou g4 antes de jogar e6.'],
+    lines: ['d4 d5 c4 c6 Nf3 Nf6 Nc3 dxc4 a4 Bf5 e3 e6 Bxc4 Bb4 O-O Nbd7'],
+    notes: { 3: 'Protege d5 sem trancar o bispo de c8.', 7: 'Captura em c4: as pretas aceitam o gambito.', 9: 'O bispo sai para f5 antes de e6.', 11: 'Agora e6 fecha a estrutura e o bispo já está fora.', 13: 'Cravada no cavalo de c3, atrasando e4.', 15: 'Desenvolve a última peça menor.' } },
+  { id: 'petrov', side: 'b', name: 'Defesa Petrov',
+    summary: 'Responde a 1.e4 com contra-ataque simétrico e jogo muito sólido.',
+    ideas: ['Contra-ataque o peão e4 com Nf6.', 'Troque material e simplifique.', 'Excelente para quem quer jogar com pretas sem correr riscos.'],
+    lines: ['e4 e5 Nf3 Nf6 Nxe5 d6 Nf3 Nxe4 d4 d5 Bd3 Nc6 O-O Be7 c4 Nb4'],
+    notes: { 3: 'Contra-ataque em vez de defender e5.', 5: 'Expulsa o cavalo: não vale capturar e4 antes disso.', 7: 'Agora sim, as pretas capturam o peão de e4.', 9: 'Cria um centro simétrico e sólido.', 11: 'Desenvolve e ataca o cavalo de e4.', 13: 'Roque curto e o rei seguro.', 15: 'Ataca o bispo de d3 e ganha tempo.' } }
+];
+OPENINGS.forEach(o => { o.moves = o.lines.map(l => l.split(' ').map(norm)); });
+const MLABEL = ['Nova', 'Aprendendo', 'Decorando', 'Pronta para o teste', 'Dominada'];
+
+/* ============ Motor simples (reserva, se o Stockfish não carregar) ============ */
+const VAL = { p: 100, n: 320, b: 330, r: 500, q: 900, k: 0 };
+const PST = {
+  p: [0,0,0,0,0,0,0,0, 50,50,50,50,50,50,50,50, 10,10,20,30,30,20,10,10, 5,5,10,25,25,10,5,5, 0,0,0,20,20,0,0,0, 5,-5,-10,0,0,-10,-5,5, 5,10,10,-20,-20,10,10,5, 0,0,0,0,0,0,0,0],
+  n: [-50,-40,-30,-30,-30,-30,-40,-50, -40,-20,0,0,0,0,-20,-40, -30,0,10,15,15,10,0,-30, -30,5,15,20,20,15,5,-30, -30,0,15,20,20,15,0,-30, -30,5,10,15,15,10,5,-30, -40,-20,0,5,5,0,-20,-40, -50,-40,-30,-30,-30,-30,-40,-50],
+  b: [-20,-10,-10,-10,-10,-10,-10,-20, -10,0,0,0,0,0,0,-10, -10,0,5,10,10,5,0,-10, -10,5,5,10,10,5,5,-10, -10,0,10,10,10,10,0,-10, -10,10,10,10,10,10,10,-10, -10,5,0,0,0,0,5,-10, -20,-10,-10,-10,-10,-10,-10,-20],
+  r: [0,0,0,0,0,0,0,0, 5,10,10,10,10,10,10,5, -5,0,0,0,0,0,0,-5, -5,0,0,0,0,0,0,-5, -5,0,0,0,0,0,0,-5, -5,0,0,0,0,0,0,-5, -5,0,0,0,0,0,0,-5, 0,0,0,5,5,0,0,0],
+  q: [-20,-10,-10,-5,-5,-10,-10,-20, -10,0,0,0,0,0,0,-10, -10,0,5,5,5,5,0,-10, -5,0,5,5,5,5,0,-5, 0,0,5,5,5,5,0,-5, -10,5,5,5,5,5,0,-10, -10,0,5,0,0,0,0,-10, -20,-10,-10,-5,-5,-10,-10,-20],
+  k: [-30,-40,-40,-50,-50,-40,-40,-30, -30,-40,-40,-50,-50,-40,-40,-30, -30,-40,-40,-50,-50,-40,-40,-30, -30,-40,-40,-50,-50,-40,-40,-30, -20,-30,-30,-40,-40,-30,-30,-20, -10,-20,-20,-20,-20,-20,-20,-10, 20,20,0,0,0,0,20,20, 20,30,10,0,0,10,30,20]
+};
+const MATE = 100000;
+const LEVELS = {
+  1: { depth: 1, time: 300,  margin: 600, random: 0.35 },
+  2: { depth: 1, time: 300,  margin: 250, random: 0.1 },
+  3: { depth: 2, time: 800,  margin: 90,  random: 0 },
+  4: { depth: 3, time: 1600, margin: 0,   random: 0 },
+  5: { depth: 6, time: 3200, margin: 0,   random: 0 }
+};
+function evaluate(g) {
+  const b = g.board();
+  let s = 0;
+  for (let r = 0; r < 8; r++) for (let c = 0; c < 8; c++) {
+    const p = b[r][c];
+    if (!p) continue;
+    if (p.color === 'w') s += VAL[p.type] + PST[p.type][r * 8 + c];
+    else s -= VAL[p.type] + PST[p.type][(7 - r) * 8 + c];
+  }
+  return s;
+}
+function moveScore(m) { let s = 0; if (m.captured) s += 10 * VAL[m.captured] - VAL[m.piece]; if (m.promotion) s += 800; return s; }
+function orderMoves(ms) { return ms.sort((a, b) => moveScore(b) - moveScore(a)); }
+function mk(g, m) { return g.move({ from: m.from, to: m.to, promotion: m.promotion }); }
+function quiesce(g, alpha, beta, ctx, qd) {
+  const sign = g.turn() === 'w' ? 1 : -1;
+  const stand = sign * evaluate(g);
+  if (qd <= 0) return stand;
+  if (stand >= beta) return beta;
+  if (stand > alpha) alpha = stand;
+  const caps = orderMoves(g.moves({ verbose: true }).filter(m => m.captured || m.promotion));
+  for (const m of caps) {
+    mk(g, m);
+    const sc = -quiesce(g, -beta, -alpha, ctx, qd - 1);
+    g.undo();
+    if (sc >= beta) return beta;
+    if (sc > alpha) alpha = sc;
+  }
+  return alpha;
+}
+function negamax(g, depth, alpha, beta, ply, ctx) {
+  if ((++ctx.nodes & 255) === 0 && Date.now() > ctx.deadline) ctx.abort = true;
+  if (ctx.abort) return 0;
+  const moves = g.moves({ verbose: true });
+  if (moves.length === 0) return g.in_check() ? -MATE + ply : 0;
+  if (depth <= 0) return quiesce(g, alpha, beta, ctx, 3);
+  orderMoves(moves);
+  let best = -Infinity;
+  for (const m of moves) {
+    mk(g, m);
+    const sc = -negamax(g, depth - 1, -beta, -alpha, ply + 1, ctx);
+    g.undo();
+    if (ctx.abort) return 0;
+    if (sc > best) best = sc;
+    if (sc > alpha) alpha = sc;
+    if (alpha >= beta) break;
+  }
+  return best;
+}
+function chooseMove(g, level) {
+  const cfg0 = LEVELS[level] || LEVELS[3];
+  const moves = g.moves({ verbose: true });
+  if (!moves.length) return null;
+  if (Math.random() < cfg0.random) return moves[Math.floor(Math.random() * moves.length)];
+  orderMoves(moves);
+  const deadline = Date.now() + cfg0.time;
+  let result = null;
+  for (let depth = 1; depth <= cfg0.depth; depth++) {
+    const ctx = { nodes: 0, deadline, abort: false };
+    const scored = [];
+    let alpha = -Infinity;
+    for (const m of moves) {
+      mk(g, m);
+      const sc = cfg0.margin > 0 ? -negamax(g, depth - 1, -Infinity, Infinity, 1, ctx) : -negamax(g, depth - 1, -Infinity, -alpha, 1, ctx);
+      g.undo();
+      if (ctx.abort) break;
+      scored.push({ m, sc });
+      if (sc > alpha) alpha = sc;
+    }
+    if (ctx.abort) break;
+    scored.sort((a, b) => b.sc - a.sc);
+    result = scored;
+    if (scored[0].sc > MATE - 100) break;
+    const idx = moves.indexOf(scored[0].m);
+    if (idx > 0) { moves.splice(idx, 1); moves.unshift(scored[0].m); }
+  }
+  if (!result) return moves[0];
+  const top = result[0].sc;
+  const pool = result.filter(x => x.sc >= top - cfg0.margin);
+  return pool[Math.floor(Math.random() * pool.length)].m;
+}
+
+/* ============ Utilidades e estado ============ */
+const $ = id => document.getElementById(id);
+const FILES = 'abcdefgh';
+const VS = '︎';
+const GLYPH = { k: '♚', q: '♛', r: '♜', b: '♝', n: '♞', p: '♟' };
+const PT = { p: 'peão', n: 'cavalo', b: 'bispo', r: 'torre', q: 'dama', k: 'rei' };
+const ART = { p: 'o peão', n: 'o cavalo', b: 'o bispo', r: 'a torre', q: 'a dama', k: 'o rei' };
+const LEVEL_INFO = {
+  1: ['Iniciante', 'Comete erros grosseiros.'],
+  2: ['Fácil', 'Força aproximada de 1300 Elo.'],
+  3: ['Médio', 'Força aproximada de 1700 Elo.'],
+  4: ['Difícil', 'Força aproximada de 2200 Elo.'],
+  5: ['Máximo', 'Força total do Stockfish, acima de qualquer humano.']
+};
+const reduced = () => { try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; } };
+const rand = a => a[Math.floor(Math.random() * a.length)];
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const openingById = id => OPENINGS.find(o => o.id === id) || null;
+const sideName = c => (c === 'w' ? 'Brancas' : 'Pretas');
+const TRAIN_FULL = true; // item 4 (decorar + partida de teste): ligado a pedido do usuário.
+
+const cfg = { user: 'w', pick: 'najdorf', level: 3, time: 'none' };
+let TAB = 'play';
+let P = null, R = null, S = null;
+const T = { id: null, stage: 'learn', line: 0, ply: 0, lg: null, guided: true, level: 3 };
+
+function mkState() {
+  return { mode: 'play', game: new Chess(), user: 'w', opening: null, pick: '', level: 3, flipped: false, sel: null, targets: [], promo: null,
+    thinking: false, token: 0, book: { state: 'free', msg: '' }, revealed: false, hint: '', guide: null, flag: null, hints: 0, anim: null, bad: null, drill: null, celebrate: false };
+}
+
+/* ---- progresso salvo no aparelho ---- */
+const PKEY = 'xeque-treino-v2';
+let PROG = {};
+function loadProg() { try { PROG = JSON.parse(localStorage.getItem(PKEY) || '{}') || {}; } catch (e) { PROG = {}; } }
+function saveProg() { try { localStorage.setItem(PKEY, JSON.stringify(PROG)); } catch (e) {} }
+function getProg(id) { return PROG[id] || { learned: false, guidedDone: false, clean: 0, tests: 0 }; }
+function touch(id) { if (!PROG[id]) PROG[id] = { learned: false, guidedDone: false, clean: 0, tests: 0 }; return PROG[id]; }
+function mastery(id) { const p = getProg(id); let n = 0; if (p.learned) n = 1; if (p.clean >= 1) n = 2; if (p.clean >= 3) n = 3; if (p.tests >= 1) n = 4; return n; }
+
+/* ---- linhas das aberturas ---- */
+function validateLines() {
+  OPENINGS.forEach(o => {
+    const kept = [];
+    o.lines.forEach(line => {
+      const g = new Chess();
+      const ok = [];
+      for (const t of line.split(' ')) {
+        if (!g.move(norm(t))) { try { console.warn('Lance inválido em', o.name, t); } catch (e) {} break; }
+        ok.push(t);
+      }
+      if (ok.length >= 2) kept.push(ok.join(' '));
+    });
+    if (kept.length) o.lines = kept;
+    o.moves = o.lines.map(l => l.split(' ').map(norm));
+  });
+}
+const LV = {};
+function lineVerbose(o, li) {
+  const k = o.id + '|' + li;
+  if (LV[k]) return LV[k];
+  const g = new Chess(), out = [];
+  for (const t of o.moves[li]) { const m = g.move(t); if (!m) break; out.push(m); }
+  return (LV[k] = out);
+}
+function genericNote(m) {
+  if (m.flags.indexOf('k') >= 0 || m.flags.indexOf('q') >= 0) return 'Roque: coloca o rei em segurança e ativa a torre.';
+  const chk = /[+#]/.test(m.san) ? ' Dá xeque.' : '';
+  if (m.captured) return `Captura ${ART[m.captured]} em ${m.to}.` + chk;
+  if (m.piece === 'p') {
+    if (['e4', 'd4', 'e5', 'd5'].indexOf(m.to) >= 0) return 'Ocupa o centro com o peão.' + chk;
+    if (['c4', 'c5'].indexOf(m.to) >= 0) return 'Disputa o centro pelo flanco.' + chk;
+    return `Avança o peão para ${m.to}.` + chk;
+  }
+  if (m.piece === 'n') return `Desenvolve o cavalo para ${m.to}.` + chk;
+  if (m.piece === 'b') return `Desenvolve o bispo para ${m.to}.` + chk;
+  if (m.piece === 'q') return `A dama vai para ${m.to}.` + chk;
+  if (m.piece === 'r') return `A torre vai para ${m.to}.` + chk;
+  return `O rei vai para ${m.to}.` + chk;
+}
+function noteFor(o, li, ply) {
+  const m = lineVerbose(o, li)[ply];
+  if (!m) return '';
+  return (li === 0 && o.notes && o.notes[ply]) || genericNote(m);
+}
+
+/* ============ Livro de aberturas na partida ============ */
+const histNorm = g => g.history().map(norm);
+function matches(o, h) { return o.moves.filter(m => m.length >= h.length && h.every((x, i) => m[i] === x)); }
+function bookFresh(st) {
+  const o = st.opening;
+  if (!o) { st.book = { state: 'free', msg: 'Sem livro: o oponente joga só com o motor.' }; return; }
+  const h = histNorm(st.game), m = matches(o, h);
+  if (m.some(x => x.length > h.length)) st.book = { state: 'in', msg: '' };
+  else if (m.length) st.book = { state: 'done', msg: 'Fim da linha teórica. Daqui em diante o jogo é livre.' };
+  else st.book = { state: 'out', msg: 'Fora da teoria. O oponente continua com o motor.' };
+}
+function bookEval(st) {
+  const o = st.opening;
+  if (!o || st.book.state === 'out' || st.book.state === 'done') return;
+  const h = histNorm(st.game), m = matches(o, h);
+  if (m.some(x => x.length > h.length)) { st.book = { state: 'in', msg: '' }; return; }
+  if (m.length) { st.book = { state: 'done', msg: 'Fim da linha teórica. Daqui em diante o jogo é livre.' }; if (st.mode === 'test') testDone(st); return; }
+  const hist = st.game.history({ verbose: true }), last = hist[hist.length - 1], n = h.length;
+  const before = matches(o, h.slice(0, n - 1)).filter(x => x.length >= n);
+  const exp = before.length ? before[0][n - 1] : null;
+  const who = last.color === st.user ? 'Você saiu' : 'O oponente saiu';
+  st.book = { state: 'out', msg: `${who} da linha no lance ${Math.ceil(n / 2)} (${last.san}).` + (exp ? ` O livro esperava ${exp}.` : '') };
+}
+function bookCandidates(st) {
+  if (st.book.state !== 'in' || !st.opening) return [];
+  const h = histNorm(st.game);
+  return Array.from(new Set(matches(st.opening, h).filter(x => x.length > h.length).map(x => x[h.length])));
+}
+function testDone(st) {
+  if (st.hints > 0) { st.book.msg = 'Linha concluída, mas com dica. Jogue de novo sem dicas para contar como teste.'; return; }
+  const p = touch(st.opening.id);
+  p.tests++; p.learned = true; saveProg();
+  st.book.msg = 'Linha concluída sem ajuda! Essa abertura está dominada.';
+  st.celebrate = true;
+  setTimeout(() => sfx('win'), 380);
+}
+
+/* ============ Sons (sintetizados no aparelho, sem arquivos) ============ */
+const SND = { on: true, ctx: null, master: null, noise: null };
+try { SND.on = localStorage.getItem('xeque-snd') !== '0'; } catch (e) {}
+function aCtx() {
+  if (!SND.on) return null;
+  try {
+    if (!SND.ctx) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return null;
+      const c = new AC(), comp = c.createDynamicsCompressor(), m = c.createGain();
+      m.gain.value = 0.9;
+      m.connect(comp); comp.connect(c.destination);
+      const len = Math.floor(c.sampleRate * 0.5), buf = c.createBuffer(1, len, c.sampleRate), d = buf.getChannelData(0);
+      for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+      SND.ctx = c; SND.master = m; SND.noise = buf;
+    }
+    if (SND.ctx.state === 'suspended') SND.ctx.resume().catch(() => {});
+    return SND.ctx;
+  } catch (e) { return null; }
+}
+function sTone(freq, t, dur, type, vol, to) {
+  const c = SND.ctx, o = c.createOscillator(), g = c.createGain();
+  o.type = type || 'sine';
+  o.frequency.setValueAtTime(freq, t);
+  if (to) o.frequency.exponentialRampToValueAtTime(to, t + dur);
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(vol, t + 0.008);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(g); g.connect(SND.master);
+  o.start(t); o.stop(t + dur + 0.05);
+}
+function sNoise(t, dur, freq, q, vol) {
+  const c = SND.ctx, s = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain();
+  s.buffer = SND.noise;
+  f.type = 'bandpass'; f.frequency.value = freq; f.Q.value = q;
+  g.gain.setValueAtTime(vol, t);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  s.connect(f); f.connect(g); g.connect(SND.master);
+  s.start(t); s.stop(t + dur + 0.02);
+}
+function wood(t, opp) { sNoise(t, 0.05, opp ? 1500 : 1800, 1.2, 0.55); sTone(opp ? 160 : 190, t, 0.09, 'sine', 0.55, opp ? 80 : 95); }
+function sfx(name, o) {
+  const c = aCtx();
+  if (!c) return;
+  try {
+    const t = c.currentTime + 0.01, opp = !!(o && o.opp);
+    if (name === 'move') wood(t, opp);
+    else if (name === 'capture') { sNoise(t, 0.09, 1200, 0.9, 0.85); sTone(opp ? 125 : 140, t, 0.14, 'sine', 0.7, 60); sNoise(t + 0.05, 0.05, 2400, 1.5, 0.4); }
+    else if (name === 'castle') { wood(t, opp); wood(t + 0.12, opp); }
+    else if (name === 'promote') [523, 659, 784, 1047].forEach((f, i) => sTone(f, t + i * 0.07, 0.18, 'triangle', 0.26));
+    else if (name === 'alert') { sTone(740, t, 0.1, 'triangle', 0.25); sTone(988, t + 0.09, 0.16, 'triangle', 0.25); }
+    else if (name === 'win') { [523, 659, 784, 1047].forEach((f, i) => sTone(f, t + i * 0.1, 0.3, 'triangle', 0.28)); [523, 659, 784].forEach(f => sTone(f, t + 0.45, 0.7, 'sine', 0.16)); }
+    else if (name === 'lose') { sTone(392, t, 0.28, 'sine', 0.3, 330); sTone(330, t + 0.24, 0.5, 'sine', 0.3, 247); }
+    else if (name === 'draw') { sTone(392, t, 0.22, 'sine', 0.26); sTone(370, t + 0.24, 0.4, 'sine', 0.26); }
+    else if (name === 'wrong') { sTone(150, t, 0.18, 'sawtooth', 0.16, 100); sNoise(t, 0.08, 400, 0.8, 0.3); }
+    else if (name === 'good') { sTone(880, t, 0.25, 'sine', 0.32); sTone(1318, t + 0.05, 0.32, 'sine', 0.22); }
+    else if (name === 'start') { sTone(392, t, 0.12, 'triangle', 0.24); sTone(523, t + 0.12, 0.2, 'triangle', 0.24); }
+    else if (name === 'tick') sNoise(t, 0.02, 3500, 3, 0.3);
+  } catch (e) {}
+}
+function sndForMove(mv, byOpp, st) {
+  if (!mv || !SND.on) return;
+  const o = { opp: !!byOpp }, base = mv.captured ? 'capture' : 'move';
+  if (mv.san.indexOf('#') >= 0) { sfx(base, o); setTimeout(() => sfx(byOpp ? 'lose' : 'win'), 380); return; }
+  if (mv.flags.indexOf('k') >= 0 || mv.flags.indexOf('q') >= 0) sfx('castle', o);
+  else if (mv.promotion) sfx('promote', o);
+  else sfx(base, o);
+  if (mv.san.indexOf('+') >= 0) setTimeout(() => sfx('alert'), 70);
+  else if (st && st.game && st.game.game_over()) setTimeout(() => sfx('draw'), 380);
+}
+const ICON_ON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg>';
+const ICON_OFF = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M22 9l-6 6M16 9l6 6"/></svg>';
+function renderSndBtn() {
+  const b = $('snd-btn');
+  if (!b) return;
+  b.innerHTML = SND.on ? ICON_ON : ICON_OFF;
+  b.setAttribute('aria-pressed', String(SND.on));
+  b.setAttribute('aria-label', SND.on ? 'Som ligado. Toque para desligar' : 'Som desligado. Toque para ligar');
+}
+function toggleSound() {
+  SND.on = !SND.on;
+  try { localStorage.setItem('xeque-snd', SND.on ? '1' : '0'); } catch (e) {}
+  renderSndBtn();
+  if (SND.on) sfx('good');
+}
+
+/* ============ Partida ============ */
+const isOver = st => st.game.game_over() || !!st.flag;
+function upd(st) { if (st === S && (TAB === 'play' || TAB === 'train')) render(); }
+
+function startGame(st, o) {
+  st.token++; sfAbort(st);
+  st.mode = o.mode; st.user = o.user; st.level = o.level;
+  st.game = new Chess(); st.flipped = o.user === 'b';
+  st.sel = null; st.targets = []; st.promo = null; st.thinking = false; st.hint = ''; st.guide = null;
+  st.revealed = false; st.flag = null; st.hints = 0; st.anim = null; st.bad = null; st.celebrate = false;
+  st.pick = o.pick || ''; st.opening = o.opening || null; st.drill = o.drill || null;
+  bookFresh(st);
+  if (st === P) clockReset();
+  upd(st);
+  if (st.mode !== 'idle' && st.game.turn() !== st.user) oppTurn(st);
+}
+function startPlay() {
+  const user = cfg.user, oppSide = user === 'w' ? 'b' : 'w', pool = OPENINGS.filter(o => o.side === oppSide);
+  let opening = null;
+  if (cfg.pick === 'free') opening = null;
+  else if (cfg.pick === 'random') opening = rand(pool);
+  else opening = openingById(cfg.pick) || pool[0];
+  startGame(P, { mode: 'play', user, level: cfg.level, opening, pick: cfg.pick });
+}
+
+function squareClick(st, sq) {
+  if (st.thinking || st.promo || st.mode === 'idle' || isOver(st) || st.game.turn() !== st.user) return;
+  if (st.drill && st.drill.done) return;
+  const t = st.targets.find(x => x.to === sq);
+  if (st.sel && t) { tryMove(st, st.sel, sq); return; }
+  const p = st.game.get(sq);
+  if (p && p.color === st.user) { st.sel = sq; st.targets = st.game.moves({ square: sq, verbose: true }); }
+  else { st.sel = null; st.targets = []; }
+  st.hint = ''; st.guide = null;
+  upd(st);
+}
+function tryMove(st, from, to) {
+  const cand = st.game.moves({ verbose: true }).filter(m => m.from === from && m.to === to);
+  if (!cand.length) { st.sel = null; st.targets = []; upd(st); return; }
+  if (cand[0].promotion && cand.length > 1) { st.promo = { from, to }; st.sel = null; st.targets = []; upd(st); return; }
+  doUserMove(st, from, to, cand[0].promotion);
+}
+function doUserMove(st, from, to, promotion) {
+  if (st.mode === 'drill') { drillUserMove(st, from, to, promotion); return; }
+  const mv = st.game.move({ from, to, promotion });
+  st.sel = null; st.targets = []; st.promo = null; st.hint = ''; st.guide = null;
+  if (!mv) { upd(st); return; }
+  st.anim = { from: mv.from, to: mv.to };
+  sndForMove(mv, false, st);
+  if (st === P) clockMoved(st.user);
+  if (st.game.in_checkmate()) st.celebrate = true;
+  bookEval(st);
+  upd(st);
+  if (!isOver(st)) oppTurn(st);
+}
+function oppTurn(st) {
+  if (st.mode === 'drill') { drillOpp(st); return; }
+  const g = st.game;
+  if (isOver(st)) { upd(st); return; }
+  st.thinking = true; upd(st);
+  const tok = st.token, opp = st.user === 'w' ? 'b' : 'w';
+  const san = bookCandidates(st), pickSan = san.length ? rand(san) : null;
+  const finish = moved => { if (moved && st === P) clockMoved(opp); st.thinking = false; bookEval(st); upd(st); };
+  setTimeout(() => {
+    if (tok !== st.token) return;
+    if (pickSan) { const mv = g.move(pickSan); if (mv) { st.anim = { from: mv.from, to: mv.to }; sndForMove(mv, true, st); finish(true); return; } }
+    engineMove(st, m => {
+      if (tok !== st.token) return;
+      const mv = m ? mk(g, m) : null;
+      if (mv) { st.anim = { from: mv.from, to: mv.to }; sndForMove(mv, true, st); }
+      finish(!!mv);
+    }, tok);
+  }, pickSan ? 500 : 20);
+}
+function undo(st) {
+  if (st.thinking || st.promo || st.flag || st.mode === 'idle' || st.mode === 'drill') return;
+  const g = st.game, hist = g.history({ verbose: true }), n = hist.length;
+  if (!n) return;
+  const k = hist[n - 1].color === st.user ? 1 : 2;
+  if (k === 2 && n < 2) return;
+  if (k === 2 && n - 2 < (st.user === 'b' ? 1 : 0)) return;
+  for (let i = 0; i < k; i++) g.undo();
+  st.sel = null; st.targets = []; st.hint = ''; st.guide = null; st.anim = null;
+  bookFresh(st);
+  upd(st);
+}
+function expectedSan(st) { const h = st.game.history().length; return st.drill ? st.drill.toks[h] : (bookCandidates(st)[0] || null); }
+function sanToSquares(g, san) {
+  if (!san) return null;
+  const m = g.moves({ verbose: true }).find(x => norm(x.san) === san);
+  return m ? [m.from, m.to] : null;
+}
+function giveHint(st) {
+  if (st.thinking || isOver(st) || st.game.turn() !== st.user || st.mode === 'idle') return;
+  const c = bookCandidates(st);
+  st.hints++;
+  if (!st.opening) st.hint = 'Sem livro nesta partida, então não há sugestão da teoria.';
+  else if (!c.length) st.hint = 'Sem sugestão da teoria nesta posição.';
+  else { st.hint = c.length === 1 ? `Na teoria: ${c[0]}.` : `Na teoria: ${c.join(' ou ')}.`; st.guide = c.length === 1 ? sanToSquares(st.game, c[0]) : null; }
+  upd(st);
+}
+
+/* ============ Treino de abertura (decorar) ============ */
+function drillStart() {
+  const o = openingById(T.id);
+  const drill = { line: T.line, toks: o.moves[T.line], errors: 0, hints: 0, guided: T.guided, done: false, wrong: null, result: null };
+  startGame(R, { mode: 'drill', user: o.side, level: 1, opening: o, pick: o.id, drill });
+}
+function drillOpp(st) {
+  const d = st.drill, tok = st.token;
+  st.thinking = true; upd(st);
+  setTimeout(() => {
+    if (tok !== st.token) return;
+    st.thinking = false;
+    const exp = d.toks[st.game.history().length];
+    if (exp) { const mv = st.game.move(exp); if (mv) { st.anim = { from: mv.from, to: mv.to }; sndForMove(mv, true, st); } }
+    if (st.game.history().length >= d.toks.length) drillFinish(st);
+    upd(st);
+  }, 550);
+}
+function drillUserMove(st, from, to, promotion) {
+  const d = st.drill;
+  if (!d || d.done) return;
+  const exp = d.toks[st.game.history().length];
+  const mv = st.game.move({ from, to, promotion });
+  st.sel = null; st.targets = []; st.promo = null;
+  if (!mv) { upd(st); return; }
+  if (norm(mv.san) === exp) {
+    d.wrong = null; st.anim = { from: mv.from, to: mv.to }; st.guide = null; sndForMove(mv, false, st);
+    if (st.game.history().length >= d.toks.length) { drillFinish(st); upd(st); return; }
+    upd(st);
+    drillOpp(st);
+  } else {
+    st.game.undo(); d.errors++; d.wrong = mv.san; st.bad = [from, to]; sfx('wrong');
+    upd(st);
+    setTimeout(() => { if (st.bad) { st.bad = null; upd(st); } }, 700);
+  }
+}
+function drillFinish(st) {
+  const d = st.drill, p = touch(st.opening.id);
+  d.done = true; p.learned = true;
+  const clean = d.errors === 0 && d.hints === 0 && !d.guided;
+  if (d.guided) p.guidedDone = true;
+  if (clean) { p.clean++; st.celebrate = true; }
+  d.result = clean ? 'clean' : (d.guided ? 'guided' : 'dirty');
+  setTimeout(() => sfx(clean ? 'win' : 'good'), 380);
+  saveProg();
+}
+function testStart() {
+  const o = openingById(T.id);
+  startGame(R, { mode: 'test', user: o.side, level: T.level, opening: o, pick: o.id });
+}
+
+/* ---- navegação do treinador ---- */
+function openTrainer(id) {
+  const p = getProg(id);
+  T.id = id; T.line = 0; T.ply = 0; T.level = cfg.level;
+  setStage(TRAIN_FULL ? (p.tests >= 1 || p.clean >= 3 ? 'test' : (p.learned ? 'drill' : 'learn')) : 'learn');
+}
+function setStage(s) {
+  if (!TRAIN_FULL) s = 'learn';
+  const o = openingById(T.id);
+  T.stage = s; R.token++; sfAbort(R); R.thinking = false;
+  if (s === 'learn') { R.mode = 'idle'; R.flipped = o.side === 'b'; buildLearn(); render(); }
+  else if (s === 'drill') { T.guided = !getProg(T.id).guidedDone; drillStart(); }
+  else { startGame(R, { mode: 'idle', user: o.side, level: T.level, opening: o, pick: o.id }); }
+}
+function buildLearn() {
+  const o = openingById(T.id), toks = o.moves[T.line];
+  T.lg = new Chess();
+  for (let i = 0; i < T.ply && i < toks.length; i++) T.lg.move(toks[i]);
+}
+function learnGoto(ply, fwd) {
+  const o = openingById(T.id), max = o.moves[T.line].length;
+  const prev = T.ply;
+  T.ply = Math.max(0, Math.min(max, ply));
+  buildLearn();
+  if (T.ply >= max) { touch(T.id).learned = true; saveProg(); }
+  const h = T.lg.history({ verbose: true }), last = h[h.length - 1];
+  R.anim = (fwd !== false && T.ply > prev && last) ? { from: last.from, to: last.to } : null;
+  if (fwd !== false && T.ply > prev && last) sndForMove(last, last.color !== o.side, null);
+  render();
+}
+
+/* ============ Stockfish ============ */
+const SF = { worker: null, state: 'idle', busy: false, discard: 0, onBest: null, onInfo: null, owner: null, waiters: [], timer: null };
+const SF_LEVELS = { 1: { skill: 0, ms: 60 }, 2: { elo: 1320, ms: 150 }, 3: { elo: 1700, ms: 300 }, 4: { elo: 2200, ms: 600 }, 5: { skill: 20, ms: 1500 } };
+function sfSet(state) {
+  SF.state = state;
+  const msgs = { loading: 'Carregando o Stockfish…', ready: 'Motor: Stockfish 19.', failed: 'O Stockfish não carregou neste aparelho. Usando o motor simples do app.' };
+  const el = $('engine-note');
+  if (el) el.textContent = msgs[state] || '';
+  if (state === 'ready' || state === 'failed') { const w = SF.waiters; SF.waiters = []; w.forEach(f => f()); }
+  if (S) syncSettings();
+}
+function sfFail() {
+  clearTimeout(SF.timer);
+  try { if (SF.worker) SF.worker.terminate(); } catch (e) {}
+  SF.worker = null; SF.busy = false; SF.discard = 0;
+  const cb = SF.onBest; SF.onBest = null; SF.onInfo = null;
+  sfSet('failed');
+  if (cb) cb(null);
+}
+function sfInit() {
+  try {
+    sfSet('loading');
+    const w = new Worker('stockfish-19-lite-single.js');
+    SF.worker = w;
+    SF.timer = setTimeout(() => { if (SF.state === 'loading') sfFail(); }, 10000);
+    w.onerror = () => sfFail();
+    w.onmessage = ev => {
+      const line = typeof ev.data === 'string' ? ev.data : '';
+      if (line === 'uciok') w.postMessage('isready');
+      else if (line === 'readyok') { if (SF.state === 'loading') { clearTimeout(SF.timer); w.postMessage('ucinewgame'); sfSet('ready'); } }
+      else if (line.indexOf('info') === 0) { if (SF.onInfo) SF.onInfo(line); }
+      else if (line.indexOf('bestmove') === 0) {
+        SF.busy = false;
+        if (SF.discard > 0) { SF.discard--; return; }
+        const cb = SF.onBest; SF.onBest = null;
+        if (cb) cb(line.split(' ')[1]);
+      }
+    };
+    w.postMessage('uci');
+  } catch (e) { sfFail(); }
+}
+function sfAbort(st) {
+  if (SF.owner !== st) return;
+  if (SF.worker && SF.busy) { SF.discard++; SF.worker.postMessage('stop'); }
+  SF.onBest = null; SF.onInfo = null;
+}
+function uciToMove(g, uci) {
+  if (!uci || uci.length < 4) return null;
+  const from = uci.slice(0, 2), to = uci.slice(2, 4), pr = uci[4];
+  return g.moves({ verbose: true }).find(m => m.from === from && m.to === to && (!m.promotion || m.promotion === (pr || 'q'))) || null;
+}
+function uciHistory(g) { return g.history({ verbose: true }).map(m => m.from + m.to + (m.promotion || '')); }
+function engineMove(st, done, tok) {
+  if (tok !== st.token) return;
+  const g = st.game;
+  if (SF.state === 'loading') { SF.waiters.push(() => engineMove(st, done, tok)); return; }
+  if (SF.state !== 'ready' || !SF.worker) { setTimeout(() => { if (tok === st.token) done(chooseMove(g, st.level)); }, 20); return; }
+  if (SF.busy) { setTimeout(() => engineMove(st, done, tok), 120); return; }
+  const c = SF_LEVELS[st.level] || SF_LEVELS[3], w = SF.worker;
+  if (c.elo) { w.postMessage('setoption name UCI_LimitStrength value true'); w.postMessage('setoption name UCI_Elo value ' + c.elo); }
+  else { w.postMessage('setoption name UCI_LimitStrength value false'); w.postMessage('setoption name Skill Level value ' + c.skill); }
+  const mv = uciHistory(g);
+  w.postMessage('position startpos' + (mv.length ? ' moves ' + mv.join(' ') : ''));
+  SF.busy = true; SF.owner = st;
+  SF.onBest = uci => { done(uciToMove(g, uci) || chooseMove(g, st.level)); };
+  w.postMessage('go movetime ' + c.ms);
+}
+function sfAnalyze(g, ms, cb, tries) {
+  tries = tries || 0;
+  if (SF.state === 'loading') { SF.waiters.push(() => sfAnalyze(g, ms, cb, tries)); return; }
+  if (SF.state !== 'ready' || !SF.worker) { cb(null); return; }
+  if (SF.busy) { if (tries > 40) { cb(null); return; } setTimeout(() => sfAnalyze(g, ms, cb, tries + 1), 150); return; }
+  const w = SF.worker, turn = g.turn(), mv = uciHistory(g);
+  SF.owner = 'analysis';
+  w.postMessage('setoption name UCI_LimitStrength value false');
+  w.postMessage('setoption name Skill Level value 20');
+  w.postMessage('position startpos' + (mv.length ? ' moves ' + mv.join(' ') : ''));
+  let last = null;
+  SF.onInfo = line => {
+    const m = /score (cp|mate) (-?\d+)/.exec(line);
+    if (m) last = { kind: m[1], v: (turn === 'w' ? 1 : -1) * Number(m[2]) };
+  };
+  SF.busy = true;
+  SF.onBest = uci => { SF.onInfo = null; const m = uciToMove(g, uci); cb({ san: m ? m.san : uci, score: last }); };
+  w.postMessage('go movetime ' + ms);
+}
+function evalText(s) {
+  if (!s) return 'sem avaliação';
+  if (s.kind === 'mate') return s.v > 0 ? `mate das brancas em ${s.v}` : `mate das pretas em ${-s.v}`;
+  const p = s.v / 100, a = Math.abs(p);
+  const txt = (p > 0 ? '+' : p < 0 ? '−' : '') + a.toFixed(1).replace('.', ',');
+  const who = a < 0.3 ? 'posição equilibrada' : (p > 0 ? 'brancas' : 'pretas') + (a < 1 ? ' um pouco melhores' : a < 2.5 ? ' melhores' : ' com grande vantagem');
+  return `${txt} (${who})`;
+}
+
+/* ============ Relógio (somente na aba Jogar) ============ */
+const TIMES = { 'none': null, '1+0': [60, 0], '3+0': [180, 0], '3+2': [180, 2], '5+0': [300, 0], '5+3': [300, 3], '10+0': [600, 0], '10+5': [600, 5], '15+10': [900, 10], '30+0': [1800, 0] };
+const C = { on: false, inc: 0, w: 0, b: 0, last: 0, timer: null };
+function fmt(ms) {
+  if (ms < 20000) return (Math.max(0, ms) / 1000).toFixed(1);
+  const s = Math.ceil(ms / 1000);
+  return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+}
+function clockPaint() {
+  const top = $('clk-top'), bot = $('clk-bot');
+  const show = C.on && TAB === 'play' && !!P;
+  top.hidden = !show; bot.hidden = !show;
+  if (!show) return;
+  const bc = P.flipped ? 'b' : 'w', tc = bc === 'w' ? 'b' : 'w';
+  const run = (!P.flag && !P.game.game_over() && P.game.history().length >= 2) ? P.game.turn() : null;
+  const html = c => `<span class="who">${c === P.user ? 'Você' : 'Oponente'} · ${sideName(c)}</span><span class="t">${fmt(C[c])}</span>`;
+  top.innerHTML = html(tc); bot.innerHTML = html(bc);
+  top.className = 'clockbar' + (run === tc ? ' act' : '') + (C[tc] < 20000 ? ' low' : '');
+  bot.className = 'clockbar' + (run === bc ? ' act' : '') + (C[bc] < 20000 ? ' low' : '');
+}
+function clockFlag(color) {
+  P.flag = color; P.token++; sfAbort(P);
+  if (color !== P.user) P.celebrate = true;
+  sfx(color !== P.user ? 'win' : 'lose');
+  P.thinking = false; P.sel = null; P.targets = []; P.promo = null; P.hint = ''; P.guide = null;
+  upd(P);
+}
+function clockTick() {
+  const now = Date.now(), dt = now - C.last;
+  C.last = now;
+  if (!C.on || P.flag || P.game.game_over() || TAB !== 'play') { clockPaint(); return; }
+  if (P.game.history().length >= 2) {
+    const turn = P.game.turn();
+    C[turn] -= dt;
+    if (turn === P.user && C[turn] > 0 && C[turn] < 10000) { const sec = Math.ceil(C[turn] / 1000); if (sec !== C.tickSec) { C.tickSec = sec; sfx('tick'); } }
+    if (C[turn] <= 0) { C[turn] = 0; clockFlag(turn); return; }
+  }
+  clockPaint();
+}
+function clockMoved(color) { if (C.on && P.game.history().length > 2) C[color] += C.inc; }
+function clockReset() {
+  P.flag = null;
+  clearInterval(C.timer); C.timer = null;
+  const t = TIMES[cfg.time];
+  C.on = !!t;
+  if (t) { C.w = t[0] * 1000; C.b = t[0] * 1000; C.inc = t[1] * 1000; C.last = Date.now(); C.timer = setInterval(clockTick, 100); }
+}
+
+/* ============ Desenho do tabuleiro ============ */
+function sqXY(sq, flipped) {
+  let c = FILES.indexOf(sq[0]), r = 8 - Number(sq[1]);
+  if (flipped) { c = 7 - c; r = 7 - r; }
+  return [c, r];
+}
+function animatePiece(a, flipped) {
+  const el = $('board').querySelector('.sq[data-v="' + a.to + '"] .pc');
+  if (!el) return;
+  const f = sqXY(a.from, flipped), t = sqXY(a.to, flipped);
+  el.style.transition = 'none';
+  el.style.transform = `translate(${(f[0] - t[0]) * 12.5}cqw, ${(f[1] - t[1]) * 12.5}cqw)`;
+  el.style.zIndex = 5;
+  void el.offsetWidth;
+  el.style.transition = 'transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1)';
+  el.style.transform = '';
+}
+function renderBoard(g, o) {
+  const b = g.board(), hist = g.history({ verbose: true }), last = hist[hist.length - 1];
+  let chk = null;
+  if (g.in_check()) {
+    const t = g.turn();
+    for (let r = 0; r < 8; r++) for (let c = 0; c < 8; c++) { const p = b[r][c]; if (p && p.type === 'k' && p.color === t) chk = FILES[c] + (8 - r); }
+  }
+  const tg = {};
+  (o.targets || []).forEach(t => { tg[t.to] = t; });
+  const guide = new Set(o.guide || []), bad = new Set(o.bad || []);
+  let html = '';
+  for (let r = 0; r < 8; r++) for (let c = 0; c < 8; c++) {
+    const row = o.flipped ? 7 - r : r, col = o.flipped ? 7 - c : c, sq = FILES[col] + (8 - row), p = b[row][col];
+    const cls = ['sq'];
+    if ((row + col) % 2 === 1) cls.push('d');
+    if (last && (last.from === sq || last.to === sq)) cls.push('last');
+    if (chk === sq) cls.push('chk');
+    if (o.sel === sq) cls.push('sel');
+    if (guide.has(sq)) cls.push('gd');
+    if (bad.has(sq)) cls.push('bad');
+    if (tg[sq]) cls.push(p || tg[sq].flags.indexOf('e') >= 0 ? 'cap' : 'dot');
+    const label = sq + (p ? ', ' + PT[p.type] + (p.color === 'w' ? ' branco' : ' preto') : '');
+    html += `<button class="${cls.join(' ')}" data-act="sq" data-v="${sq}" aria-label="${label}">`;
+    if (c === 0) html += `<span class="co rk">${8 - row}</span>`;
+    if (r === 7) html += `<span class="co fl">${FILES[col]}</span>`;
+    if (p) html += `<span class="pc ${p.color}">${GLYPH[p.type]}${VS}</span>`;
+    html += '</button>';
+  }
+  $('board').innerHTML = html;
+  if (o.anim && !reduced()) animatePiece(o.anim, o.flipped);
+}
+function boardOpts(st) {
+  const o = { flipped: st.flipped, sel: st.sel, targets: st.targets, anim: st.anim, bad: st.bad };
+  let guide = st.guide ? st.guide.slice() : null;
+  if (st.drill && !st.drill.done && st.game.turn() === st.user && !st.thinking) {
+    if (st.drill.guided || st.drill.wrong) guide = sanToSquares(st.game, st.drill.toks[st.game.history().length]) || guide;
+  }
+  o.guide = guide;
+  st.anim = null;
+  return o;
+}
+
+/* ============ Textos de status ============ */
+function setStatus(label, cls, html) { $('status').innerHTML = `<span class="badge ${cls}">${label}</span><p>${html}</p>`; }
+function overText(st) {
+  const g = st.game;
+  if (g.in_checkmate()) return g.turn() === st.user ? 'Xeque-mate. O oponente venceu.' : 'Xeque-mate! Você venceu.';
+  if (g.in_stalemate()) return 'Empate por afogamento.';
+  if (g.insufficient_material()) return 'Empate por material insuficiente.';
+  if (g.in_threefold_repetition()) return 'Empate por repetição de posição.';
+  return 'Empate pela regra dos 50 lances.';
+}
+function renderStatus(st) {
+  const g = st.game, o = st.opening;
+  if (TAB === 'train' && T.stage === 'learn') {
+    const op = openingById(T.id), toks = op.moves[T.line];
+    let where = 'Posição inicial.';
+    if (T.ply > 0) { const i = T.ply - 1; where = 'Após ' + moveLabel(i, lineVerbose(op, T.line)[i] ? lineVerbose(op, T.line)[i].san : toks[i]) + '.'; }
+    setStatus('Aula', 'good', `${esc(op.name)}. ${where}`);
+    return;
+  }
+  if (st.mode === 'idle') { setStatus('Teste', '', 'Escolha o nível no painel e comece a partida de teste.'); return; }
+  if (st.mode === 'drill') {
+    const d = st.drill;
+    if (d.done) { setStatus('Linha completa', d.result === 'clean' ? 'good' : 'gold', d.result === 'clean' ? 'Você jogou a linha inteira sem ajuda e sem erros.' : 'Linha concluída. Veja o resultado no painel.'); return; }
+    if (st.thinking) { setStatus('Oponente', '', 'Responde pela teoria…'); return; }
+    const exp = d.toks[g.history().length];
+    const sh = exp ? (sanToSquares(g, exp) ? g.moves({ verbose: true }).find(x => norm(x.san) === exp).san : exp) : '';
+    if (d.wrong) { setStatus('Fora do livro', 'bad', `Você jogou ${esc(d.wrong)}. O livro pede <b>${esc(sh)}</b> (casas marcadas). Tente de novo.`); return; }
+    if (d.guided) { setStatus('Guiado', 'good', `Sua vez. O livro pede <b>${esc(sh)}</b> (casas marcadas).`); return; }
+    setStatus('Sem ajuda', 'gold', `Sua vez. Lembra o próximo lance? Lance ${Math.floor(g.history().length / 2) + 1} de ${Math.ceil(d.toks.length / 2)}.`);
+    return;
+  }
+  if (st.flag) { setStatus('Fim', st.flag === st.user ? 'bad' : 'good', st.flag === st.user ? 'Seu tempo acabou. O oponente venceu.' : 'O tempo do oponente acabou. Você venceu!'); return; }
+  if (g.game_over()) { setStatus('Fim', g.in_checkmate() ? (g.turn() !== st.user ? 'good' : 'bad') : '', overText(st)); return; }
+  if (st.thinking) {
+    if (st.book.state === 'out' && st.book.msg) setStatus('Fora da teoria', 'warn', esc(st.book.msg) + ' O oponente está pensando…');
+    else setStatus('Oponente', '', 'Pensando…');
+    return;
+  }
+  if (st.hint) { setStatus('Dica', 'good', esc(st.hint)); return; }
+  const chk = g.in_check() ? ' Seu rei está em xeque.' : '';
+  const stt = st.book.state, n = g.history().length;
+  const hiddenRand = st.mode === 'play' && st.pick === 'random' && !st.revealed && o;
+  const label = hiddenRand ? 'abertura sorteada' : (o ? o.name : '');
+  const reveal = hiddenRand ? ' <button class="btn small" data-act="reveal">Revelar</button>' : '';
+  if (stt === 'in') {
+    if (st.mode === 'test') setStatus('Na teoria', 'good', `Teste de ${esc(label)}: siga a linha. ` + (n === 0 || (n === 1 && st.user === 'b') ? 'Faça seu primeiro lance.' : 'Sua vez.') + chk);
+    else {
+      const first = n === 0 || (n === 1 && st.user === 'b');
+      setStatus('Na teoria', 'good', (first ? `Oponente joga ${esc(label)}. Faça seu primeiro lance.` : `Seguindo a linha de ${esc(label)}. Sua vez.`) + chk, reveal);
+      if (reveal) $('status').querySelector('p').insertAdjacentHTML('beforeend', reveal);
+    }
+  } else if (stt === 'out') setStatus('Fora da teoria', 'warn', esc(st.book.msg) + chk);
+  else if (stt === 'done') setStatus(st.mode === 'test' && st.hints === 0 ? 'Dominada' : 'Fim da linha', 'good', esc(st.book.msg) + chk);
+  else setStatus('Sem livro', '', 'Sua vez.' + chk);
+}
+function moveLabel(i, san) { return Math.floor(i / 2) + 1 + (i % 2 ? '...' : '.') + ' ' + san; }
+function movesHTML(st) {
+  const h = st.game.history();
+  if (!h.length) return '<span class="empty">Nenhum lance ainda.</span>';
+  let out = '';
+  for (let i = 0; i < h.length; i += 2) {
+    out += `<span class="mn">${i / 2 + 1}.</span><span class="mv${i === h.length - 1 ? ' now' : ''}">${h[i]}</span><span class="mv${i + 1 === h.length - 1 ? ' now' : ''}">${h[i + 1] || ''}</span>`;
+  }
+  return out;
+}
+function renderPromo(st) {
+  const el = $('promo');
+  if (!st.promo) { el.hidden = true; el.innerHTML = ''; return; }
+  el.hidden = false;
+  el.innerHTML = '<span class="t">Promover para:</span>' + ['q', 'r', 'b', 'n'].map(t => `<button class="btn" data-act="promo" data-v="${t}" aria-label="${PT[t]}"><span class="pc ${st.user}" style="font-size:1.8rem">${GLYPH[t]}${VS}</span></button>`).join('');
+}
+
+/* ============ Painéis ============ */
+function levelPills(cur, act) {
+  return [1, 2, 3, 4, 5].map(n => `<button class="pill" role="radio" aria-checked="${n === cur}" data-act="${act}" data-v="${n}">${n}</button>`).join('');
+}
+function syncSettings() {
+  document.querySelectorAll('#seg-color .pill').forEach(b => b.setAttribute('aria-checked', String(b.dataset.v === cfg.user)));
+  $('seg-level').innerHTML = levelPills(cfg.level, 'level');
+  const oppSide = cfg.user === 'w' ? 'b' : 'w', list = OPENINGS.filter(o => o.side === oppSide);
+  if (cfg.pick !== 'random' && cfg.pick !== 'free' && !list.some(o => o.id === cfg.pick)) cfg.pick = list[0].id;
+  let opts = '<option value="random">Aleatória (surpresa)</option><option value="free">Sem livro (só o motor)</option>';
+  opts += `<optgroup label="${oppSide === 'w' ? 'Aberturas de Brancas' : 'Defesas de Pretas'}">` + list.map(o => `<option value="${o.id}">${o.name}</option>`).join('') + '</optgroup>';
+  const sel = $('sel-opening');
+  sel.innerHTML = opts; sel.value = cfg.pick;
+  const li = LEVEL_INFO[cfg.level];
+  $('levelname').innerHTML = `<b>${li[0]}.</b>` + (SF.state === 'failed' ? '' : ' ' + li[1]);
+}
+function pipsHTML(n, total) { let h = ''; for (let i = 0; i < total; i++) h += `<span class="pip${i < n ? ' on' : ''}"></span>`; return h; }
+
+function listHTML() {
+  const card = o => {
+    const m = mastery(o.id);
+    return `<button class="ocard" data-act="topen" data-v="${o.id}"><span class="oc-top"><b>${esc(o.name)}</b><span class="tag">${sideName(o.side)}</span></span><span class="oc-sum">${esc(o.summary)}</span>${TRAIN_FULL ? `<span class="oc-foot"><span class="pips" aria-hidden="true">${pipsHTML(m, 4)}</span><span class="mlabel">${MLABEL[m]}</span></span>` : ''}</button>`;
+  };
+  const cont = OPENINGS.filter(o => { const m = mastery(o.id); return m > 0 && m < 4; }).sort((a, b) => mastery(b.id) - mastery(a.id))[0];
+  const done = OPENINGS.filter(o => mastery(o.id) === 4).length;
+  let h = !TRAIN_FULL ? '<div class="field"><h2>Aulas de aberturas</h2><p class="hint">Escolha uma abertura para ver as ideias e percorrer a linha lance a lance.</p></div>' : `<div class="field"><h2>Treino de aberturas</h2><p class="hint">Cada abertura tem 3 etapas: aprender a linha com as ideias, decorar sem ajuda (3 rodadas limpas) e testar numa partida de verdade. Dominadas: ${done} de ${OPENINGS.length}.</p></div>`;
+  if (cont && TRAIN_FULL) h +=`<button class="ocard resume" data-act="topen" data-v="${cont.id}"><span class="lbl">Continuar de onde parou</span><span class="oc-top"><b>${esc(cont.name)}</b><span class="mlabel">${MLABEL[mastery(cont.id)]}</span></span></button>`;
+  h += `<div class="field"><span class="lbl">Para jogar de Brancas</span><div class="olist">${OPENINGS.filter(o => o.side === 'w').map(card).join('')}</div></div>`;
+  h += `<div class="field"><span class="lbl">Para jogar de Pretas</span><div class="olist">${OPENINGS.filter(o => o.side === 'b').map(card).join('')}</div></div>`;
+  return h;
+}
+function trainHead(o) {
+  const st = T.stage;
+  return `<div class="thead"><button class="btn round" data-act="tback" aria-label="Voltar à lista de aberturas">&#8249;</button><div class="tt"><h2>${esc(o.name)}</h2><span class="tag">Você joga de ${sideName(o.side)}</span></div></div>
+  ${TRAIN_FULL ? `<div class="steps" role="tablist" aria-label="Etapas do treino">
+    <button class="step" role="tab" aria-selected="${st === 'learn'}" data-act="stage" data-v="learn">1 · Aprender</button>
+    <button class="step" role="tab" aria-selected="${st === 'drill'}" data-act="stage" data-v="drill">2 · Decorar</button>
+    <button class="step" role="tab" aria-selected="${st === 'test'}" data-act="stage" data-v="test">3 · Teste</button>
+  </div>` : ''}`;
+}
+function linePicker(o, withLabel) {
+  if (o.lines.length < 2) return '';
+  return `<div class="field">${withLabel ? '<span class="lbl">Variante</span>' : ''}<div class="pills">` + o.lines.map((l, i) => `<button class="pill wide" aria-pressed="${i === T.line}" data-act="tline" data-v="${i}">Linha ${i + 1}: ${esc(l.split(' ').slice(0, 6).join(' '))}…</button>`).join('') + '</div></div>';
+}
+function learnPanel(o) {
+  const toks = o.lines[T.line].split(' '), vm = lineVerbose(o, T.line);
+  let chips = '';
+  toks.forEach((t, i) => {
+    if (i % 2 === 0) chips += `<span class="n">${i / 2 + 1}.</span>`;
+    chips += `<button class="chip${T.ply === i + 1 ? ' on' : ''}" data-act="tply" data-v="${i + 1}">${esc(vm[i] ? vm[i].san : t)}</button>`;
+  });
+  let note;
+  if (T.ply === 0) note = 'Posição inicial. Toque em Avançar para ver o primeiro lance e a ideia por trás dele.';
+  else {
+    const i = T.ply - 1, m = vm[i];
+    note = `<b>${moveLabel(i, m.san)}</b> · ${m.color === o.side ? 'seu lance' : 'resposta do oponente'} (${sideName(m.color)})<br>${esc(noteFor(o, T.line, i))}`;
+  }
+  return `${trainHead(o)}
+  <p>${esc(o.summary)}</p>
+  <div class="field"><span class="lbl">Ideias principais</span><ul class="ideas">${o.ideas.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>
+  ${linePicker(o, true)}
+  <div class="notebox" aria-live="polite">${note}</div>
+  <div class="field"><span class="lbl">Linha (toque num lance)</span><div class="line">${chips}</div></div>
+  ${TRAIN_FULL ? '<button class="btn primary" data-act="stage" data-v="drill">Já entendi: decorar &#9654;</button>' : ''}`;
+}
+function drillPanel(o) {
+  const d = R.drill, p = getProg(o.id), total = d ? d.toks.length : 1, cur = d ? Math.min(R.game.history().length, total) : 0;
+  let res = '';
+  if (d && d.done) {
+    if (d.result === 'clean') {
+      const n = p.clean;
+      res = `<div class="result"><h3>Sem erros e sem ajuda!</h3><p>Rodadas limpas: ${Math.min(n, 3)} de 3.${n >= 3 ? ' Você já está pronto para o teste.' : ' Repita até chegar a 3.'}</p><div class="actions">${n >= 3 ? '<button class="btn primary grow" data-act="stage" data-v="test">Ir para o teste</button>' : ''}<button class="btn grow" data-act="d-restart">Repetir</button></div></div>`;
+    } else if (d.result === 'guided') {
+      res = `<div class="result mid"><h3>Rodada guiada concluída</h3><p>${d.errors ? `Você errou ${d.errors} vez(es), mas terminou.` : 'Sem erros.'} Agora tente sem as casas marcadas: só rodadas sem ajuda contam.</p><div class="actions"><button class="btn primary grow" data-act="d-unguided">Tentar sem ajuda</button><button class="btn grow" data-act="d-restart">Repetir guiada</button></div></div>`;
+    } else {
+      res = `<div class="result mid"><h3>Linha concluída com ${d.errors ? d.errors + ' erro(s)' : ''}${d.errors && d.hints ? ' e ' : ''}${d.hints ? d.hints + ' ajuda(s)' : ''}</h3><p>Essa rodada não conta. Tente de novo: precisa ser sem erros e sem pedir o lance.</p><div class="actions"><button class="btn primary grow" data-act="d-restart">Tentar de novo</button></div></div>`;
+    }
+  }
+  return `${trainHead(o)}
+  ${linePicker(o, true)}
+  <div class="field"><span class="lbl" id="lbl-guided">Modo</span>
+    <div class="pills" role="radiogroup" aria-labelledby="lbl-guided">
+      <button class="pill" role="radio" aria-checked="${T.guided}" data-act="tguided" data-v="1">Guiado</button>
+      <button class="pill" role="radio" aria-checked="${!T.guided}" data-act="tguided" data-v="0">Sem ajuda</button>
+    </div>
+    <p class="hint">${T.guided ? 'As casas do próximo lance ficam marcadas. Serve para aprender, mas não conta como rodada limpa.' : 'Sem marcação. Se errar, o app mostra o lance certo, e a rodada deixa de contar.'}</p>
+  </div>
+  <div class="field"><div class="row"><span class="lbl">Progresso da linha</span><span class="mlabel">Lance ${cur} de ${total}</span></div><div class="track"><i style="width:${Math.round(cur / total * 100)}%"></i></div></div>
+  <div class="field"><div class="row"><span class="lbl">Rodadas limpas</span><span class="pips" aria-label="${Math.min(p.clean, 3)} de 3">${pipsHTML(Math.min(p.clean, 3), 3)}</span></div></div>
+  ${res}`;
+}
+function testPanel(o) {
+  const live = R.mode === 'test';
+  const p = getProg(o.id);
+  return `${trainHead(o)}
+  <p>Partida de verdade contra o Stockfish. O oponente responde pela teoria enquanto você seguir a linha. Se você sair do livro, o app diz o lance que era para jogar e a partida continua.</p>
+  <div class="field"><span class="lbl" id="lbl-tl">Nível do oponente</span><div class="pills" role="radiogroup" aria-labelledby="lbl-tl">${levelPills(T.level, 'tlevel')}</div><p class="levelname"><b>${LEVEL_INFO[T.level][0]}.</b> ${LEVEL_INFO[T.level][1]}</p></div>
+  <button class="btn primary" data-act="tstart">${live ? 'Nova partida de teste' : 'Começar partida de teste'}</button>
+  <p class="hint">${p.tests >= 1 ? `Testes concluídos sem ajuda: ${p.tests}.` : 'Concluir a linha sem pedir dica marca a abertura como dominada.'}</p>
+  ${live ? `<div class="field"><span class="lbl">Lances</span><div class="moves">${movesHTML(R)}</div></div>` : ''}`;
+}
+function renderTrain() {
+  const el = $('view-train');
+  if (!T.id) { el.innerHTML = listHTML(); return; }
+  const o = openingById(T.id);
+  if (T.stage === 'learn') {
+    renderBoard(T.lg, { flipped: R.flipped, sel: null, targets: [], anim: R.anim });
+    R.anim = null;
+    renderStatus(R);
+    el.innerHTML = learnPanel(o);
+  } else {
+    renderBoard(R.game, boardOpts(R));
+    renderStatus(R);
+    el.innerHTML = T.stage === 'drill' ? drillPanel(o) : testPanel(o);
+    if (T.stage === 'drill' && R.drill && R.drill.done && !R.drill.seen) {
+      R.drill.seen = true;
+      setTimeout(() => { try { const r2 = $('view-train').querySelector('.result'); if (r2) r2.scrollIntoView({ behavior: reduced() ? 'auto' : 'smooth', block: 'center' }); } catch (e) {} }, 350);
+    }
+    renderPromo(R);
+  }
+  $('act-play').hidden = !(T.stage === 'test');
+  $('act-learn').hidden = T.stage !== 'learn';
+  $('act-drill').hidden = T.stage !== 'drill';
+  $('b-hint-dummy');
+}
+
+/* ============ Professor ============ */
+const KB = [
+  { id: 'mov', q: 'Como cada peça se move?', keys: ['mover', 'move', 'movimento', 'anda', 'como jogar', 'regras'], a: 'Torre: linhas retas (colunas e fileiras). Bispo: diagonais. Dama: junta torre e bispo. Rei: uma casa em qualquer direção. Cavalo: em "L" (duas casas numa direção e uma de lado), e é a única peça que pula as outras. Peão: anda uma casa para frente (duas na primeira vez) e captura na diagonal.' },
+  { id: 'val', q: 'Quanto vale cada peça?', keys: ['valor', 'vale', 'pontos', 'pontuacao'], a: 'Referência em pontos: peão 1, cavalo 3, bispo 3, torre 5, dama 9. O rei não tem valor porque não pode ser capturado. Use como guia: trocar um cavalo por três peões raramente compensa, mas a posição pode mudar tudo.' },
+  { id: 'prin', q: 'Princípios da abertura', keys: ['principio', 'abertura basica', 'comecar bem', 'comeco'], a: '1) Controle o centro com peões (e4, d4). 2) Desenvolva cavalos e bispos antes das torres e da dama. 3) Faça o roque cedo. 4) Não mova a mesma peça duas vezes sem motivo. 5) Não saia com a dama cedo demais. 6) Conecte as torres.' },
+  { id: 'roque', q: 'Como funciona o roque?', keys: ['roque', 'castle', 'castling'], a: 'Você move o rei duas casas em direção a uma torre e a torre passa para o outro lado do rei. Só vale se nem o rei nem essa torre se moveram antes, se não há peças entre eles, se o rei não está em xeque e não passa nem chega a uma casa atacada. Roque curto: lado do rei (O-O). Roque longo: lado da dama (O-O-O).' },
+  { id: 'ep', q: 'O que é en passant?', keys: ['en passant', 'passant'], a: 'Se um peão avança duas casas e para ao lado de um peão adversário, este pode capturá-lo como se tivesse avançado só uma casa. Só vale no lance imediatamente seguinte.' },
+  { id: 'promo', q: 'O que é promoção?', keys: ['promocao', 'promover', 'coroar'], a: 'Quando um peão chega à última fileira, vira dama, torre, bispo ou cavalo, à sua escolha. Quase sempre se escolhe a dama, mas o cavalo às vezes dá xeque ou evita um afogamento.' },
+  { id: 'mate', q: 'Xeque, mate e afogamento', keys: ['xeque', 'mate', 'afogamento'], a: 'Xeque: o rei está atacado e é preciso sair, bloquear ou capturar quem ataca. Xeque-mate: não há como escapar e o jogo acaba. Afogamento: não é xeque, mas quem joga não tem lance legal. É empate, e muita gente perde vitória por isso.' },
+  { id: 'emp', q: 'Formas de empate', keys: ['empate', 'repeticao', '50 lances', 'material insuficiente'], a: 'Empate por acordo, afogamento, repetição tripla da mesma posição, regra dos 50 lances (50 lances sem captura nem movimento de peão) e material insuficiente (por exemplo, rei contra rei e bispo).' },
+  { id: 'tat', q: 'Táticas básicas', keys: ['tatica', 'garfo', 'cravada', 'espeto', 'descoberto'], a: 'Garfo: uma peça ataca duas ao mesmo tempo (cavalos adoram). Cravada: uma peça não pode sair porque expõe outra mais valiosa atrás dela. Espeto: o contrário, a peça valiosa é forçada a sair e perde a de trás. Ataque descoberto: ao mover uma peça, você libera o ataque de outra. Antes de cada lance, pergunte: o que meu adversário ameaça? O que ele deixou desprotegido?' },
+  { id: 'est', q: 'O que é estratégia?', keys: ['estrategia', 'peao passado', 'estrutura', 'casa fraca', 'coluna aberta', 'plano'], a: 'Estratégia é o plano de longo prazo. Ideias comuns: colocar torres em colunas abertas, usar casas fortes para os cavalos, criar um peão passado (sem peões adversários na frente), evitar peões dobrados e isolados, e manter o rei seguro.' },
+  { id: 'fin', q: 'Como jogar os finais?', keys: ['final', 'finais', 'oposicao', 'rei e peao'], a: 'Nos finais o rei vira peça de ataque: leve-o ao centro. Em finais de rei e peão, a oposição (os reis frente a frente, e quem não tem o lance fica em vantagem) decide muita coisa. Torres ficam melhor atrás dos peões passados. Treine primeiro o mate de rei e dama contra rei e o de rei e torre contra rei.' },
+  { id: 'esc', q: 'Qual abertura escolher?', keys: ['qual abertura', 'escolher abertura', 'melhor abertura', 'recomenda', 'indica'], a: 'Para brancas, comece com a Italiana ou o Sistema Londres: poucas ideias para decorar e jogo previsível. Para pretas contra 1.e4, a Caro-Kann ou a Petrov são sólidas; contra 1.d4, a Eslava ou a Índia do Rei. Escolha uma e jogue umas 20 partidas antes de trocar.' },
+  { id: 'dec', q: 'Como decorar aberturas?', keys: ['decorar', 'memorizar', 'lembrar', 'estudar abertura'], a: 'Entenda a ideia de cada lance antes de decorar a sequência. ' + (TRAIN_FULL ? 'Na aba Treinar: Aprender (veja as ideias), Decorar (jogue sem ajuda até fechar 3 rodadas limpas) e Teste (partida de verdade). ' : 'Na aba Aula, percorra a linha lance a lance e leia a ideia de cada um. ') + 'Revise no dia seguinte e depois de uma semana. Decorar o motivo do lance ajuda mais do que decorar a ordem.' },
+  { id: 'mel', q: 'Como melhorar no xadrez?', keys: ['melhorar', 'evoluir', 'dicas', 'rotina', 'ficar bom'], a: 'Uma rotina simples: 1) táticas todo dia (15 minutos), 2) jogar partidas longas e revisá-las, 3) estudar um repertório pequeno de aberturas, 4) aprender finais básicos. Antes de cada lance, olhe xeques, capturas e ameaças do adversário.' },
+  { id: 'not', q: 'Como ler a notação dos lances?', keys: ['notacao', 'algebrica', 'sigla', 'letras'], a: 'Usamos as letras em inglês: K rei, Q dama, R torre, B bispo, N cavalo; sem letra é peão. "x" é captura, "+" é xeque, "#" é mate, O-O é roque curto e O-O-O é roque longo. Exemplos: Nf3 é o cavalo indo para f3; exd5 é o peão da coluna e capturando em d5.' },
+  { id: 'elo', q: 'O que significam os níveis?', keys: ['nivel', 'elo', 'dificuldade', 'stockfish'], a: 'O oponente é o Stockfish 19. O nível 1 comete erros grosseiros, o 2 joga perto de 1300 de Elo, o 3 perto de 1700, o 4 perto de 2200 e o 5 usa a força total, que ganha de qualquer humano.' }
+];
+const CHIP_IDS = ['prin', 'esc', 'dec', 'tat', 'val', 'roque', 'fin', 'mel'];
+const stripAcc = s => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+function matchKB(text) {
+  const t = stripAcc(text);
+  let best = null, bs = 0;
+  KB.forEach(k => { let s = 0; k.keys.forEach(w => { if (t.indexOf(stripAcc(w)) >= 0) s += w.length; }); if (s > bs) { bs = s; best = k; } });
+  return best;
+}
+const Q = { ai: null, use: true, busy: false, ctl: null, hist: [] };
+function bubble(role, text) {
+  const el = document.createElement('div');
+  el.className = 'bubble ' + role;
+  el.textContent = text;
+  const chat = $('chat');
+  chat.appendChild(el);
+  chat.scrollTop = chat.scrollHeight;
+  return el;
+}
+function setBusy(b) {
+  Q.busy = b;
+  $('asksend').hidden = b; $('askstop').hidden = !b;
+  $('askin').disabled = b;
+}
+function renderChips() {
+  const kb = CHIP_IDS.map(id => KB.find(k => k.id === id));
+  $('chips').innerHTML = '<button class="qchip gold" data-act="analyze">Analisar minha partida</button><button class="qchip gold" data-act="bookwhere">Onde saí do livro?</button>' + kb.map(k => `<button class="qchip" data-act="kb" data-v="${k.id}">${esc(k.q)}</button>`).join('');
+}
+function renderAINote() {
+  const t = $('ai-toggle');
+  if (Q.ai) {
+    t.hidden = false;
+    t.textContent = Q.use ? 'IA ligada' : 'IA desligada';
+    t.className = 'btn small' + (Q.use ? ' gold' : '');
+    $('ai-note').textContent = Q.use ? 'Perguntas digitadas usam a IA do seu Claude. Os botões abaixo respondem na hora.' : 'IA desligada: só respostas prontas.';
+  } else {
+    t.hidden = true;
+    $('ai-note').textContent = 'Respostas prontas e análise do Stockfish. Digite uma palavra-chave (roque, tática, finais…) ou toque num botão.';
+  }
+}
+async function initAI() {
+  try { const c = window.claude; if (c && c.use) Q.ai = await c.use('sample'); } catch (e) { Q.ai = null; }
+  if (typeof Q.ai !== 'function') Q.ai = null;
+  renderAINote();
+}
+const RULES = 'Você é um professor de xadrez paciente e direto, falando português do Brasil com um aluno que usa um app de treino. Responda em no máximo 8 linhas, sem tabelas e sem títulos. Use frases curtas e exemplos concretos. Você não calcula variantes longas com segurança: ao falar de lances concretos da posição do aluno, use apenas os dados do Stockfish que vierem na mensagem; sem esses dados, explique ideias e planos em vez de lances exatos. Se a pergunta não for sobre xadrez, diga gentilmente que só ajuda com xadrez.';
+function ctxText() {
+  let c = 'Contexto do app (use só se a pergunta tiver relação):';
+  try {
+    if (P && P.game.history().length) c += `\n- Partida na aba Jogar: lances ${P.game.pgn()}. FEN: ${P.game.fen()}. O aluno joga de ${sideName(P.user)}, nível ${P.level} de 5.` + (P.opening ? ` Abertura seguida: ${P.opening.name}.` : '');
+    if (T.id) { const o = openingById(T.id); c += `\n- Treino aberto: ${o.name} (aluno joga de ${sideName(o.side)}), etapa ${T.stage}. Linha: ${o.lines[T.line]}.`; }
+  } catch (e) {}
+  return c;
+}
+function aiErrorText(e) {
+  const code = e && e.code;
+  if (['not_granted', 'sampling_disabled', 'not_declared', 'capability_disabled', 'capability_removed'].indexOf(code) >= 0) { Q.ai = null; renderAINote(); return 'O professor com IA não está liberado para você. Use os botões de perguntas prontas ou digite uma palavra-chave.'; }
+  if (code === 'rate_limited') return 'Muitas perguntas seguidas ou seu limite de uso acabou. Tente de novo daqui a pouco.';
+  if (code === 'session_expired') return 'Sua sessão expirou. Entre de novo no Claude e abra o app.';
+  return 'Não consegui responder agora. Tente de novo.';
+}
+async function aiAnswer(content) {
+  setBusy(true);
+  const el = bubble('bot', 'Pensando…');
+  el.classList.add('pending');
+  Q.hist.push({ role: 'user', content });
+  let h = Q.hist.slice(-9);
+  while (h.length && h[0].role !== 'user') h.shift();
+  const turns = h.map((m, i) => (i === h.length - 1 ? { role: 'user', content: RULES + '\n\n' + ctxText() + '\n\nPergunta do aluno: ' + m.content } : m));
+  const ctl = new AbortController();
+  Q.ctl = ctl;
+  try {
+    const r = await Q.ai(turns, { cache: false, signal: ctl.signal, modelTier: 'default', onText: u => { el.classList.remove('pending'); el.textContent = u.text; $('chat').scrollTop = $('chat').scrollHeight; } });
+    Q.hist.push({ role: 'assistant', content: r.text });
+    el.classList.remove('pending');
+    el.textContent = r.text + (r.truncated ? '\n(Resposta cortada. Peça menos de cada vez.)' : '');
+  } catch (e) {
+    Q.hist.pop();
+    el.classList.remove('pending');
+    if (e && e.code === 'cancelled') el.textContent = (e.text ? e.text + '\n' : '') + '(Interrompido.)';
+    else el.textContent = (e && e.text ? e.text + '\n' : '') + aiErrorText(e);
+  } finally { Q.ctl = null; setBusy(false); $('chat').scrollTop = $('chat').scrollHeight; }
+}
+function ask(text) {
+  text = text.trim();
+  if (!text || Q.busy) return;
+  bubble('user', text);
+  if (Q.ai && Q.use) { aiAnswer(text); return; }
+  const k = matchKB(text);
+  bubble('bot', k ? k.a : 'Não tenho uma resposta pronta para isso. Toque num dos botões abaixo ou tente uma palavra-chave como roque, tática, finais, abertura.');
+}
+function analyzeGame() {
+  if (Q.busy) return;
+  bubble('user', 'Analisar minha partida');
+  if (!P || !P.game.history().length) { bubble('bot', 'Ainda não há lances na aba Jogar. Faça alguns lances e peça de novo.'); return; }
+  if (P.game.game_over()) { bubble('bot', 'A partida da aba Jogar já terminou. Comece uma nova para analisar.'); return; }
+  setBusy(true);
+  const el = bubble('bot', 'Analisando com o Stockfish…');
+  el.classList.add('pending');
+  const g = new Chess(P.game.fen()), full = P.game;
+  sfAnalyze(full, 1500, res => {
+    el.classList.remove('pending');
+    if (!res) { el.textContent = 'O Stockfish não está disponível neste aparelho, então não consigo analisar a posição.'; setBusy(false); return; }
+    const txt = `Na sua partida, ${sideName(full.turn())} jogam. O Stockfish sugere ${res.san}. Avaliação: ${evalText(res.score)}.`;
+    el.textContent = txt;
+    setBusy(false);
+    if (Q.ai && Q.use) aiAnswer(`Explique em linguagem simples, para o aluno, o que está acontecendo nesta posição e por que o lance sugerido faz sentido. Dados confiáveis do Stockfish: melhor lance ${res.san}; avaliação ${evalText(res.score)}. FEN: ${g.fen()}. Lances até aqui: ${full.pgn()}.`);
+  });
+}
+function bookWhere() {
+  if (Q.busy) return;
+  bubble('user', 'Onde saí do livro?');
+  const st = (TAB === 'teach' && T.id && R.opening && R.mode !== 'idle') ? R : P;
+  if (!st || !st.opening) { bubble('bot', 'A partida atual não segue nenhuma abertura. Escolha uma abertura do oponente na aba Jogar.' + (TRAIN_FULL ? ' Ou faça um treino na aba Treinar.' : '')); return; }
+  if (st.book.state === 'in') bubble('bot', `Você ainda está na teoria de ${st.opening.name}. Continue seguindo a linha.`);
+  else bubble('bot', st.book.msg || 'Sem informação ainda.');
+}
+function initChat() {
+  bubble('bot', 'Oi! Sou o professor. Pergunte sobre regras, aberturas, táticas e finais, ou peça para analisar a sua partida da aba Jogar.');
+  renderChips();
+  renderAINote();
+  initAI();
+}
+
+/* ============ Render geral ============ */
+const SUBS = { play: 'Jogue contra o Stockfish e escolha a abertura dele.', train: TRAIN_FULL ? 'Aprenda, decore e teste suas aberturas.' : 'Veja a ideia de cada lance das aberturas.', teach: 'Tire dúvidas e analise suas partidas.' };
+function renderPlay() {
+  const st = P;
+  renderBoard(st.game, boardOpts(st));
+  renderStatus(st);
+  $('moves').innerHTML = movesHTML(st);
+  $('moves').scrollTop = $('moves').scrollHeight;
+  renderPromo(st);
+  $('b-hint-state');
+  const hb = document.querySelector('#act-play [data-act="hint"]'), ub = document.querySelector('#act-play [data-act="undo"]');
+  hb.disabled = st.thinking || isOver(st) || st.game.turn() !== st.user;
+  ub.disabled = st.thinking;
+  $('act-play').hidden = false; $('act-learn').hidden = true; $('act-drill').hidden = true;
+  clockPaint();
+}
+function render() {
+  const play = TAB === 'play', train = TAB === 'train', teach = TAB === 'teach';
+  document.querySelectorAll('.bn').forEach(b => b.setAttribute('aria-current', b.dataset.v === TAB ? 'page' : 'false'));
+  $('sub').textContent = SUBS[TAB];
+  $('view-play').hidden = !play; $('view-train').hidden = !train; $('view-teach').hidden = !teach;
+  const showBoard = play || (train && !!T.id);
+  $('boardcol').hidden = !showBoard;
+  $('grid').classList.toggle('solo', !showBoard);
+  if (!showBoard) { $('promo').hidden = true; }
+  if (play) renderPlay();
+  else if (train) renderTrain();
+  clockPaint();
+  if (S && S.celebrate && (play || train)) { S.celebrate = false; burst(); }
+}
+function burst() {
+  if (reduced()) return;
+  const box = document.createElement('div');
+  box.className = 'confetti';
+  const cols = ['var(--gold)', 'var(--accent)', 'var(--good)', 'var(--bad)'];
+  let h = '';
+  for (let i = 0; i < 26; i++) h += `<i style="left:${Math.random() * 100}%;background:${cols[i % 4]};animation-delay:${(Math.random() * 0.5).toFixed(2)}s;animation-duration:${(1.6 + Math.random() * 1.2).toFixed(2)}s"></i>`;
+  box.innerHTML = h;
+  document.body.appendChild(box);
+  setTimeout(() => box.remove(), 3200);
+}
+function setTab(t) {
+  TAB = t;
+  if (t === 'play') S = P; else if (t === 'train') S = R;
+  render();
+  try { window.scrollTo(0, 0); } catch (e) {}
+}
+
+/* ============ Eventos ============ */
+const ACT = {
+  tab: v => setTab(v),
+  sq: v => squareClick(S, v),
+  promo: v => { if (S.promo) doUserMove(S, S.promo.from, S.promo.to, v); },
+  newgame: () => { startPlay(); sfx('start'); },
+  undo: () => undo(S),
+  hint: () => giveHint(S),
+  flip: () => { S.flipped = !S.flipped; render(); },
+  reveal: () => { S.revealed = true; render(); },
+  color: v => { cfg.user = v; syncSettings(); },
+  level: v => { cfg.level = Number(v); if (P) P.level = cfg.level; syncSettings(); },
+  topen: v => openTrainer(v),
+  tback: () => { T.id = null; R.token++; sfAbort(R); R.thinking = false; render(); },
+  stage: v => setStage(v),
+  tline: v => { T.line = Number(v); T.ply = 0; if (T.stage === 'learn') { buildLearn(); render(); } else if (T.stage === 'drill') drillStart(); else render(); },
+  tply: v => learnGoto(Number(v), true),
+  'l-first': () => learnGoto(0, false),
+  'l-prev': () => learnGoto(T.ply - 1, false),
+  'l-next': () => learnGoto(T.ply + 1, true),
+  'l-last': () => learnGoto(999, false),
+  tguided: v => { T.guided = v === '1'; drillStart(); },
+  'd-restart': () => drillStart(),
+  'd-unguided': () => { T.guided = false; drillStart(); },
+  'd-show': () => {
+    const d = R.drill;
+    if (!d || d.done || R.thinking || R.game.turn() !== R.user) return;
+    d.hints++;
+    R.guide = sanToSquares(R.game, d.toks[R.game.history().length]);
+    d.wrong = d.wrong || null;
+    if (!d.guided) d.shown = true;
+    render();
+  },
+  tlevel: v => { T.level = Number(v); render(); },
+  tstart: () => testStart(),
+  kb: v => { const k = KB.find(x => x.id === v); if (!k || Q.busy) return; bubble('user', k.q); bubble('bot', k.a); },
+  analyze: () => analyzeGame(),
+  bookwhere: () => bookWhere(),
+  aitoggle: () => { Q.use = !Q.use; renderAINote(); },
+  askstop: () => { if (Q.ctl) Q.ctl.abort(); },
+  snd: () => toggleSound()
+};
+document.addEventListener('click', e => {
+  const t = e.target.closest('[data-act]');
+  if (!t || t.disabled) return;
+  const f = ACT[t.dataset.act];
+  if (f) f(t.dataset.v, t);
+});
+$('sel-opening').addEventListener('change', e => { cfg.pick = e.target.value; });
+$('sel-time').addEventListener('change', e => { cfg.time = e.target.value; });
+$('askform').addEventListener('submit', e => { e.preventDefault(); const v = $('askin').value; $('askin').value = ''; ask(v); });
+
+/* ============ Início ============ */
+if (typeof Chess !== 'function') {
+  document.body.insertAdjacentHTML('afterbegin', '<p style="padding:16px">Não consegui carregar a biblioteca de xadrez. Recarregue a página.</p>');
+} else {
+  loadProg();
+  if (!TRAIN_FULL) $('train-label').textContent = 'Aula';
+  validateLines();
+  P = mkState(); R = mkState(); S = P;
+  syncSettings();
+  renderSndBtn();
+  initChat();
+  sfInit();
+  startPlay();
+}
+</script>
+
+<script>
+/* Instalação e modo offline (só na versão para baixar) */
+(function () {
+  var deferred = null, btn = document.getElementById('install-btn');
+  window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); deferred = e; if (btn) btn.hidden = false; });
+  window.addEventListener('appinstalled', function () { deferred = null; if (btn) btn.hidden = true; });
+  if (btn) btn.addEventListener('click', function () {
+    if (!deferred) return;
+    deferred.prompt();
+    Promise.resolve(deferred.userChoice).catch(function () {}).then(function () { deferred = null; btn.hidden = true; });
+  });
+  if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+    window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); });
+  }
+})();
+</script>
+</body>
+</html>
